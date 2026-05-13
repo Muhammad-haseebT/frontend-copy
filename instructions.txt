@@ -1,0 +1,534 @@
+1. QUICK ACTIONS (0, 1, 2, 3, 4, 6)
+DOT BALL (0 runs)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "0",
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+SINGLE (1 run)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "1",
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 1,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+TWO RUNS
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "2",
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 2,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+THREE RUNS
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "3",
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 3,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+FOUR (boundary)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "4",
+    eventType: "boundary",
+    isLegal: true,
+    runsOnThisBall: 4,
+    extrasThisBall: 0,
+    four: true,           // ✅ Set true for 4
+    six: false
+}
+SIX
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "6",
+    eventType: "boundary",
+    isLegal: true,
+    runsOnThisBall: 6,
+    extrasThisBall: 0,
+    four: false,
+    six: true             // ✅ Set true for 6
+}
+2. LEG BYE MODAL (LB button)
+User selects: 1, 2, 3, or 4 leg byes
+
+Example: 2 Leg Byes
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "2",              // Number of leg byes
+    eventType: "legbye",
+    extraType: "leg-bye",
+    isLegal: true,           // ✅ Leg bye is legal
+    runsOnThisBall: 0,       // No runs off bat
+    extrasThisBall: 2,       // 2 leg byes
+    four: false,
+    six: false
+}
+3. BYE MODAL (BYE button)
+User selects: 1, 2, 3, or 4 byes
+
+Example: 3 Byes
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "3",
+    eventType: "bye",
+    extraType: "bye",
+    isLegal: true,           // ✅ Bye is legal
+    runsOnThisBall: 0,       // No runs off bat
+    extrasThisBall: 3,       // 3 byes
+    four: false,
+    six: false
+}
+4. WIDE MODAL (WIDE button)
+User selects extra runs on wide: 0, 1, 2, 3, 4
+Display shows: Total = 1 (wide) + extras
+
+Example: Wide + 2 runs
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "3",              // Total extras (1 wide + 2 runs)
+    eventType: "wide",
+    extraType: "wide",
+    isLegal: false,          // ❌ Wide is illegal
+    runsOnThisBall: 0,       // No runs off bat
+    extrasThisBall: 3,       // 1 wide + 2 extra runs
+    four: false,
+    six: false
+}
+Example: Just Wide (no extra runs)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "1",
+    eventType: "wide",
+    extraType: "wide",
+    isLegal: false,
+    runsOnThisBall: 0,
+    extrasThisBall: 1,       // Just 1 wide
+    four: false,
+    six: false
+}
+5. NO BALL MODAL (NB button)
+User selects batsman runs: 0, 1, 2, 3, 4, 6
+User checks/unchecks: "Wicket on this ball" (for catches on no-ball)
+Display shows: Total = 1 (no-ball) + runs
+
+Example: No Ball + 4 runs by batsman
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "5",              // Total: 1 no-ball + 4 runs
+    eventType: "noball",
+    extraType: "no-ball",
+    isLegal: false,          // ❌ No-ball is illegal
+    runsOnThisBall: 4,       // Batsman scored 4
+    extrasThisBall: 1,       // 1 no-ball penalty
+    four: true,              // If 4 runs, count as boundary
+    six: false
+}
+Example: No Ball + Wicket (Run Out on no-ball)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    fielderId: 205,          // Fielder who ran out
+    outPlayerId: 102,        // Non-striker ran out
+    
+    event: "runout",
+    eventType: "wicket",
+    dismissalType: "runout",
+    extraType: "no-ball",    // ✅ It was a no-ball
+    isLegal: false,          // ❌ No-ball is illegal
+    runsOnThisBall: 1,       // They attempted 1 run
+    extrasThisBall: 1,       // 1 no-ball penalty
+    four: false,
+    six: false
+}
+6. MORE MODAL (MORE button)
+Option 1: 5 Runs
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "5",
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 5,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Option 2: 7+ Runs (User inputs number)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "7",              // User entered 7
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 7,
+    extrasThisBall: 0,
+    four: false,
+    six: false,
+    comment: "Overthrow"     // Optional description
+}
+Option 3: Overthrow (4 runs + overthrow)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "8",              // 4 boundary + 4 overthrow
+    eventType: "run",
+    isLegal: true,
+    runsOnThisBall: 8,
+    extrasThisBall: 0,
+    four: true,              // Original shot was boundary
+    six: false,
+    comment: "4 + 4 overthrow"
+}
+Option 4: Penalty Runs (5 penalty runs)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    
+    event: "5",
+    eventType: "bye",        // Penalty runs are extras
+    extraType: "penalty",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 5,
+    four: false,
+    six: false,
+    comment: "Penalty runs"
+}
+7. OUT MODAL (OUT button)
+Wicket Type 1: BOWLED
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    outPlayerId: 101,        // Striker got out
+    
+    event: "bowled",
+    eventType: "wicket",
+    dismissalType: "bowled",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Wicket Type 2: CAUGHT
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    fielderId: 205,          // ✅ Fielder who caught
+    outPlayerId: 101,
+    
+    event: "caught",
+    eventType: "wicket",
+    dismissalType: "caught",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Wicket Type 3: LBW
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    outPlayerId: 101,
+    
+    event: "lbw",
+    eventType: "wicket",
+    dismissalType: "lbw",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Wicket Type 4: RUN OUT
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    fielderId: 206,          // ✅ Fielder who threw
+    outPlayerId: 102,        // Non-striker ran out
+    
+    event: "runout",
+    eventType: "wicket",
+    dismissalType: "runout",
+    isLegal: true,
+    runsOnThisBall: 1,       // They attempted 1 run
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Wicket Type 5: STUMPED
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    fielderId: 210,          // ✅ Wicket-keeper
+    outPlayerId: 101,
+    
+    event: "stumped",
+    eventType: "wicket",
+    dismissalType: "stumped",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Wicket Type 6: HIT WICKET
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    outPlayerId: 101,
+    
+    event: "hit-wicket",
+    eventType: "wicket",
+    dismissalType: "hit-wicket",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false
+}
+Wicket Type 7: RETIRED HURT (Not a wicket, but batsman leaves)
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    teamId: 1,
+    batsmanId: 101,
+    nonStrikerId: 102,
+    bowlerId: 201,
+    outPlayerId: 101,
+    
+    event: "retired-hurt",
+    eventType: "wicket",
+    dismissalType: "retired-hurt",
+    isLegal: true,
+    runsOnThisBall: 0,
+    extrasThisBall: 0,
+    four: false,
+    six: false,
+    comment: "Retired Hurt - does not count as wicket"
+}
+8. UNDO BUTTON
+Simple flag - no extra data needed
+
+javascript
+{
+    matchId: 1,
+    inningsId: 1,
+    undo: true              // ✅ Just set this flag
+}
+BACKEND RESPONSE EXAMPLE
+After submitting any ball, backend returns updated state:
+
+javascript
+{
+    // Match state
+    runs: 45,
+    wickets: 2,
+    overs: 8,
+    balls: 3,
+    extras: 5,
+    crr: 5.54,
+    rrr: 6.25,              // Only in 2nd innings
+    target: 150,            // Only in 2nd innings
+    status: "LIVE",
+    firstInnings: false,
+    
+    // Current players
+    batsmanId: 101,
+    nonStrikerId: 103,      // Changed after wicket
+    bowlerId: 201,
+    
+    // Last ball details
+    event: "4",
+    eventType: "boundary",
+    isLegal: true,
+    four: true,
+    six: false,
+    
+    // Player stats
+    batsman1Stats: [
+        {
+            playerId: 101,
+            playerName: "Virat Kohli",
+            runs: 32,
+            ballsFaced: 28,
+            fours: 4,
+            sixes: 1
+        }
+    ],
+    batsman2Stats: [
+        {
+            playerId: 103,
+            playerName: "KL Rahul",
+            runs: 8,
+            ballsFaced: 12,
+            fours: 1,
+            sixes: 0
+        }
+    ],
+    bowlerStats: [
+        {
+            playerId: 201,
+            playerName: "Jasprit Bumrah",
+            wickets: 2,
+            runsConceded: 18,
+            ballsBowled: 30,
+            economy: 3.60,
+            bowlingAverage: 9.0
+        }
+    ]
+}
