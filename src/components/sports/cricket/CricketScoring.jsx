@@ -235,6 +235,7 @@ export default function CricketScoring({
     setIsSuperOverInnings(restoredSuperOverInnings);
 
     const originalBowlingTeamId = bTeamId === team1Id ? team2Id : team1Id;
+    
     if (restoredSuperOverInnings === 2) {
       setBattingTeamId(bTeamId);
       setBowlingTeamId(originalBowlingTeamId);
@@ -367,8 +368,12 @@ export default function CricketScoring({
         return;
       }
 
-      if (receivedData.balls === 0 && receivedData.overs !== 0) {
-        openModal("bowlerModal");
+      if (receivedData.balls === 0 && receivedData.overs !== 0)
+         {
+          if(!receivedData.superOver)
+            openModal("bowlerModal");
+          else
+            openModal("end_InningsAndSuperOverModal");
         return;
       }
 
@@ -784,7 +789,7 @@ export default function CricketScoring({
                     {ball.mediaCount > 0 && (
                       <Camera
                         size={20}
-                        className="absolute -top-1 -right-1 z-10"
+                        className="absolute -top-1 -right-1 z-10 bg-white text-red-600"
                       />
                     )}
                     <span

@@ -178,7 +178,7 @@ export default function Home() {
     }
   };
 
-  const liveSlides = searchLive.slice(0, 3);
+  const liveSlides = searchLive.slice(0, 10);
 
   const goCarousel = (dir) => {
     const next = (carouselIndex + dir + liveSlides.length) % liveSlides.length;
