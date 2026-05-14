@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getMatchBalls } from "../../../../api/matchApi";
+import { Search, X, Filter } from "lucide-react";
 
 // Extra types ka label aur color mapping
 const EXTRA_CONFIG = {
@@ -18,16 +19,32 @@ const EXTRA_CONFIG = {
   },
 };
 
-const isExtra = (eventType) => eventType in EXTRA_CONFIG;
+const EVENT_FILTERS = [
+  { key: "boundary", label: "Boundaries", activeClass: "bg-blue-600 text-white border-blue-600", idleClass: "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100" },
+  { key: "wicket", label: "Wickets", activeClass: "bg-red-600 text-white border-red-600", idleClass: "text-red-700 bg-red-50 border-red-200 hover:bg-red-100" },
+  { key: "extra", label: "Extras", activeClass: "bg-orange-500 text-white border-orange-500", idleClass: "text-orange-700 bg-orange-50 border-orange-200 hover:bg-orange-100" },
+  { key: "dot", label: "Dot Balls", activeClass: "bg-gray-600 text-white border-gray-600", idleClass: "text-gray-700 bg-gray-100 border-gray-300 hover:bg-gray-200" }
+];
 
 const BallByBallTab = ({ matchId, team1Name, team2Name, team1Id, team2Id }) => {
   const [activeTeam, setActiveTeam] = useState(team1Id);
   const [balls, setBalls] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Filter States
+  const [showFilters, setShowFilters] = useState(false);
+  const [eventFilters, setEventFilters] = useState([]);
+  const [selectedBatsman, setSelectedBatsman] = useState("all");
+  const [selectedBowler, setSelectedBowler] = useState("all");
+
   useEffect(() => {
     if (matchId && activeTeam) fetchBalls();
   }, [activeTeam, matchId]);
+
+  // Reset filters when team changes
+  useEffect(() => {
+    clearFilters();
+  }, [activeTeam]);
 
   const fetchBalls = async () => {
     setLoading(true);
@@ -53,7 +70,6 @@ const BallByBallTab = ({ matchId, team1Name, team2Name, team1Id, team2Id }) => {
     return "bg-gray-100 text-gray-800 border border-gray-200";
   };
 
-  // Ball circle ke andar display text
   const getBallDisplay = (ball) => {
     const runs = ball.runs > 0 ? `+${ball.runs}` : "";
 
@@ -88,6 +104,44 @@ const BallByBallTab = ({ matchId, team1Name, team2Name, team1Id, team2Id }) => {
     return ball.event;
   };
 
+  // Unique players for dropdowns
+  const batsmen = Array.from(new Set(balls.map(b => b.batsmanName).filter(Boolean)));
+  const bowlers = Array.from(new Set(balls.map(b => b.bowlerName).filter(Boolean)));
+
+  const toggleEventFilter = (key) => {
+    setEventFilters(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const clearFilters = () => {
+    setEventFilters([]);
+    setSelectedBatsman("all");
+    setSelectedBowler("all");
+  };
+
+  const hasActiveFilters = eventFilters.length > 0 || selectedBatsman !== "all" || selectedBowler !== "all";
+
+  // Apply filters
+  const filteredBalls = balls.filter(ball => {
+    if (selectedBatsman !== "all" && ball.batsmanName !== selectedBatsman) return false;
+    if (selectedBowler !== "all" && ball.bowlerName !== selectedBowler) return false;
+
+    if (eventFilters.length === 0) return true;
+
+    const isBoundary = ball.event === "4" || ball.event === "6" || ball.isBoundary === true;
+    const isWicket = ball.isWicket === true;
+    const isExtra = ball.eventType === "wide" || ball.eventType === "noball" || ball.eventType === "legbye" || ball.eventType === "bye";
+    const isDot = ball.event === "0" && !ball.isWicket && ball.eventType === "run";
+
+    return (
+      (eventFilters.includes("boundary") && isBoundary) ||
+      (eventFilters.includes("wicket") && isWicket) ||
+      (eventFilters.includes("extra") && isExtra) ||
+      (eventFilters.includes("dot") && isDot)
+    );
+  });
+
   return (
     <div className="max-w-md mx-auto bg-white min-h-[500px] pb-10 shadow-sm rounded-lg overflow-hidden">
       {/* Team Tabs */}
@@ -110,6 +164,94 @@ const BallByBallTab = ({ matchId, team1Name, team2Name, team1Id, team2Id }) => {
         ))}
       </div>
 
+      {/* Filter Header */}
+      {balls.length > 0 && !loading && (
+        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors"
+          >
+            <Filter size={16} /> {showFilters ? "Hide Filters" : "Show Filters"}
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gray-500">
+              Showing {filteredBalls.length} of {balls.length} balls
+            </span>
+            {hasActiveFilters && (
+              <button 
+                onClick={clearFilters}
+                className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1"
+              >
+                <X size={12} /> Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Collapsible Filter Panel */}
+      {showFilters && balls.length > 0 && !loading && (
+        <div className="p-4 bg-white border-b shadow-inner space-y-4">
+          {/* Event Pills */}
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Event Type</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setEventFilters([])}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                  eventFilters.length === 0 
+                    ? "bg-gray-800 text-white border-gray-800" 
+                    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
+                }`}
+              >
+                All
+              </button>
+              {EVENT_FILTERS.map(filter => {
+                const isActive = eventFilters.includes(filter.key);
+                return (
+                  <button
+                    key={filter.key}
+                    onClick={() => toggleEventFilter(filter.key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                      isActive ? filter.activeClass : filter.idleClass
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Player Dropdowns */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Batsman</label>
+              <select 
+                value={selectedBatsman}
+                onChange={(e) => setSelectedBatsman(e.target.value)}
+                className="w-full text-xs p-2 rounded border border-gray-300 focus:border-blue-500 outline-none"
+              >
+                <option value="all">All Players</option>
+                {batsmen.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bowler</label>
+              <select 
+                value={selectedBowler}
+                onChange={(e) => setSelectedBowler(e.target.value)}
+                className="w-full text-xs p-2 rounded border border-gray-300 focus:border-blue-500 outline-none"
+              >
+                <option value="all">All Players</option>
+                {bowlers.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ball List */}
       <div className="divide-y divide-gray-100">
         {loading ? (
@@ -117,8 +259,27 @@ const BallByBallTab = ({ matchId, team1Name, team2Name, team1Id, team2Id }) => {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
             <p className="mt-4 text-gray-500">Fetching Timeline...</p>
           </div>
-        ) : balls.length > 0 ? (
-          balls.map((ball) => {
+        ) : balls.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
+            <div className="bg-gray-50 p-4 rounded-full mb-3">
+              <Search className="w-8 h-8 text-gray-300" />
+            </div>
+            <p className="text-gray-400 text-sm font-medium">
+              Innings history will appear here once the match starts.
+            </p>
+          </div>
+        ) : filteredBalls.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-10 text-center bg-gray-50/50">
+            <p className="text-gray-500 font-medium">No balls match this filter.</p>
+            <button 
+              onClick={clearFilters}
+              className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-semibold"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          filteredBalls.map((ball) => {
             const extraConfig = EXTRA_CONFIG[ball.eventType];
 
             return (
@@ -215,27 +376,6 @@ const BallByBallTab = ({ matchId, team1Name, team2Name, team1Id, team2Id }) => {
               </div>
             );
           })
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
-            <div className="bg-gray-50 p-4 rounded-full mb-3">
-              <svg
-                className="w-8 h-8 text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <p className="text-gray-400 text-sm font-medium">
-              Innings history will appear here once the match starts.
-            </p>
-          </div>
         )}
       </div>
     </div>

@@ -281,6 +281,18 @@ export const getPlayerStats = async (playerId, sport = null) => {
     throw error;
   }
 };
+
+export const getPlayerStatsByIdAndSport = async (playerId, sport) => {
+  try {
+    const response = await axios.get(`${url}/player/${playerId}/stats`, {
+      params: { sport }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching ${sport} stats for player ${playerId}:`, error);
+    return null;
+  }
+};
 export const getTopVotedPlayers = async (tournamentId) => {
   const r = await axios.get(
     `${url}/api/favourite-player/top-voted/${tournamentId}`,

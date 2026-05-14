@@ -1,11 +1,69 @@
-import React, { useRef, useState } from "react";
-import { createMedia } from "../../../../api/mediaApi";
+import React, { useState, useEffect } from "react";
+import { createMedia, getMediaByBallId, getMatchFavouriteMediaIds, toggleFavouriteMedia } from "../../../../api/mediaApi";
+import Cookies from "js-cookie";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
+import LoadingSpinner from "../../../common/LoadingSpinner";
 
 export default function Media({ ballId, matchId, onClose, onSuccess }) {
-  const [comment, setComment] = useState(""); // ✅ NEW
-  const [pendingFile, setPendingFile] = useState(null); // ✅ NEW — hold file until comment submitted
+  const [comment, setComment] = useState("");
+  const [pendingFile, setPendingFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [step, setStep] = useState("source"); // "source" | "comment"
+  const [step, setStep] = useState("gallery"); // "gallery" | "source" | "comment"
+  
+  const [mediaList, setMediaList] = useState([]);
+  const [favouriteMediaIds, setFavouriteMediaIds] = useState(new Set());
+  const [loadingMedia, setLoadingMedia] = useState(true);
+
+  const accountCookie = Cookies.get("account");
+  const accountId = accountCookie ? JSON.parse(accountCookie).id : null;
+
+  useEffect(() => {
+    fetchMediaData();
+  }, [ballId, matchId, accountId]);
+
+  const fetchMediaData = async () => {
+    setLoadingMedia(true);
+    try {
+      const [mediaRes, favRes] = await Promise.all([
+        getMediaByBallId(ballId),
+        accountId ? getMatchFavouriteMediaIds(matchId, accountId) : Promise.resolve([])
+      ]);
+      setMediaList(mediaRes);
+      setFavouriteMediaIds(new Set(favRes));
+    } catch (error) {
+      console.error("Error fetching media data:", error);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  const handleToggleFavourite = async (mediaId) => {
+    if (!accountId) {
+      alert("Please log in to favourite media");
+      return;
+    }
+    
+    // Optimistic update
+    setFavouriteMediaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(mediaId)) next.delete(mediaId);
+      else next.add(mediaId);
+      return next;
+    });
+
+    try {
+      await toggleFavouriteMedia(accountId, mediaId, matchId);
+    } catch (error) {
+      // Revert on error
+      setFavouriteMediaIds(prev => {
+        const next = new Set(prev);
+        if (next.has(mediaId)) next.delete(mediaId);
+        else next.add(mediaId);
+        return next;
+      });
+      console.error("Error toggling favourite:", error);
+    }
+  };
 
   const uploadFile = async (file, commentText) => {
     setUploading(true);
@@ -13,7 +71,9 @@ export default function Media({ ballId, matchId, onClose, onSuccess }) {
       await createMedia(matchId, ballId, file, commentText);
       alert("Upload Successful!");
       if (onSuccess) onSuccess();
-      onClose();
+      // Go back to gallery and refresh
+      setStep("gallery");
+      fetchMediaData();
     } catch (error) {
       console.error("Upload failed:", error);
       alert(`Upload failed: ${error.message}`);
@@ -25,7 +85,7 @@ export default function Media({ ballId, matchId, onClose, onSuccess }) {
   const handleFileSelected = (file) => {
     if (file) {
       setPendingFile(file);
-      setStep("comment"); // ✅ go to comment step
+      setStep("comment");
     }
   };
 
@@ -57,9 +117,55 @@ export default function Media({ ballId, matchId, onClose, onSuccess }) {
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 mx-4"
+        className="bg-white w-full max-w-sm md:max-w-md rounded-2xl shadow-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {step === "gallery" && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Ball Media</h2>
+              <button onClick={onClose} className="text-gray-400 hover:text-red-500 font-bold text-xl">&times;</button>
+            </div>
+            
+            {loadingMedia ? (
+              <div className="py-8 flex justify-center"><LoadingSpinner /></div>
+            ) : mediaList.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100 mb-4">
+                <span className="text-4xl block mb-2">📷</span>
+                <p className="text-gray-500 text-sm">No media uploaded for this ball yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {mediaList.map((media) => {
+                  const isFav = favouriteMediaIds.has(media.id);
+                  return (
+                    <div key={media.id} className="relative group rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50">
+                      <img 
+                        src={media.url} 
+                        alt="Ball media" 
+                        className="w-full h-32 object-cover"
+                      />
+                      <button
+                        onClick={() => handleToggleFavourite(media.id)}
+                        className="absolute top-2 right-2 bg-white/90 p-2 rounded-full shadow-md hover:scale-110 transition-transform z-10"
+                      >
+                        {isFav ? <FaHeart className="text-red-500 text-lg" /> : <FaRegHeart className="text-gray-400 hover:text-red-400 text-lg" />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition shadow-sm"
+              onClick={() => setStep("source")}
+            >
+              + Upload New Media
+            </button>
+          </>
+        )}
+
         {step === "source" && (
           <>
             <h2 className="text-xl font-semibold text-gray-800 text-center mb-6">
@@ -81,16 +187,21 @@ export default function Media({ ballId, matchId, onClose, onSuccess }) {
                 <span className="font-medium text-gray-700">From Gallery</span>
               </button>
             </div>
+            <button
+              onClick={() => setStep("gallery")}
+              className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600"
+            >
+              ← Back to Gallery
+            </button>
           </>
         )}
 
-        {/* ✅ Step 2 — Comment input after file selected */}
         {step === "comment" && (
           <>
             <h2 className="text-xl font-semibold text-gray-800 text-center mb-2">
               Add Comment
             </h2>
-            <p className="text-xs text-gray-400 text-center mb-4">
+            <p className="text-xs text-gray-400 text-center mb-4 truncate">
               {pendingFile?.name}
             </p>
             <textarea
@@ -103,7 +214,7 @@ export default function Media({ ballId, matchId, onClose, onSuccess }) {
             <button
               onClick={handleSubmit}
               disabled={uploading}
-              className="mt-3 w-full py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition disabled:opacity-50"
+              className="mt-3 w-full py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition disabled:opacity-50 shadow-sm"
             >
               {uploading ? "Uploading..." : "Upload"}
             </button>
@@ -115,13 +226,6 @@ export default function Media({ ballId, matchId, onClose, onSuccess }) {
             </button>
           </>
         )}
-
-        <button
-          onClick={onClose}
-          className="mt-4 w-full text-sm text-gray-400 hover:text-red-500 font-medium transition-colors"
-        >
-          Cancel
-        </button>
       </div>
     </div>
   );

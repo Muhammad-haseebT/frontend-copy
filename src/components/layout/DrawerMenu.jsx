@@ -6,19 +6,24 @@ import {
   FaChartBar,
   FaListAlt,
   FaUserShield,
+  FaShieldAlt,
   FaClipboardList,
   FaSignOutAlt,
+  FaBalanceScale,
+  FaHeart,
 } from "react-icons/fa";
 import { getAccountFromCookie, isAdminAccount } from "../../utils/accessControl";
 
 export default function DrawerMenu({ open, setOpen, username }) {
   const navigate = useNavigate();
-  const isAdmin = isAdminAccount(getAccountFromCookie());
+  const account = getAccountFromCookie();
+  const isAdmin = isAdminAccount(account);
 
   const menuItems = [
     { name: "Sports", icon: <FaFutbol />, path: "/sports" },
     { name: "Seasons", icon: <FaCalendarAlt />, path: "/seasons" },
     { name: "Stats", icon: <FaChartBar />, path: "/stats" },
+    { name: "Compare Players", icon: <FaBalanceScale />, path: "/player-comparison" },
     { name: "Matches", icon: <FaListAlt />, path: "/matches" },
     isAdmin && { name: "Manage Account", icon: <FaUserShield />, path: "/manage-accounts" },
     { name: "My Scoring Assignments", icon: <FaClipboardList />, path: "/my-scorer" },

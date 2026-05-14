@@ -32,14 +32,14 @@ export default function CricketPlayerStats({ stats }) {
         <div className="bg-white rounded-lg shadow-md p-4 text-center">
           <TrendingUp className="w-8 h-8 text-red-500 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-800">
-            {stats.totalRuns || 0}
+            {stats.runsScored ?? 0}
           </div>
           <div className="text-sm text-gray-600">Runs</div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4 text-center">
           <Target className="w-8 h-8 text-red-500 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-800">
-            {stats.wickets || 0}
+            {stats.wicketsTaken ?? 0}
           </div>
           <div className="text-sm text-gray-600">Wickets</div>
         </div>
@@ -60,19 +60,19 @@ export default function CricketPlayerStats({ stats }) {
           </h3>
         </div>
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-          <StatItem label="Runs" value={stats.totalRuns || 0} highlight />
-          <StatItem label="Balls Faced" value={stats.ballsFaced || 0} />
+          <StatItem label="Runs" value={stats.runsScored ?? 0} highlight />
+          <StatItem label="Balls Faced" value={stats.ballsFaced ?? 0} />
           <StatItem
             label="Strike Rate"
-            value={stats.strikeRate?.toFixed?.(2) ?? stats.strikeRate ?? "0.00"}
+            value={typeof stats.strikeRate === 'number' ? stats.strikeRate.toFixed(2) : "0.00"}
           />
-          <StatItem label="Highest" value={stats.highest || 0} />
-          <StatItem label="Fours" value={stats.fours || 0} />
-          <StatItem label="Sixes" value={stats.sixes || 0} />
-          <StatItem label="Not Outs" value={stats.notOuts || 0} />
+          <StatItem label="Highest" value={stats.highestScore ?? 0} />
+          <StatItem label="Fours" value={stats.fours ?? 0} />
+          <StatItem label="Sixes" value={stats.sixes ?? 0} />
+          <StatItem label="Not Outs" value={stats.notOuts ?? 0} />
           <StatItem
             label="Average"
-            value={stats.battingAvg?.toFixed?.(2) ?? "0.00"}
+            value={typeof stats.average === 'number' ? stats.average.toFixed(2) : "0.00"}
           />
         </div>
       </div>
@@ -85,17 +85,19 @@ export default function CricketPlayerStats({ stats }) {
           </h3>
         </div>
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-          <StatItem label="Wickets" value={stats.wickets || 0} highlight />
-          <StatItem label="Balls Bowled" value={stats.ballsBowled || 0} />
-          <StatItem label="Runs Conceded" value={stats.runsConceded || 0} />
+          <StatItem label="Wickets" value={stats.wicketsTaken ?? 0} highlight />
+          <StatItem label="Balls Bowled" value={stats.ballsBowled ?? 0} />
+          <StatItem label="Runs Conceded" value={stats.runsConceded ?? 0} />
           <StatItem
             label="Economy"
-            value={stats.economy?.toFixed?.(2) ?? "0.00"}
+            value={typeof stats.economy === 'number' ? stats.economy.toFixed(2) : "0.00"}
           />
           <StatItem
-            label="Average"
-            value={stats.bowlingAverage?.toFixed?.(2) ?? "0.00"}
+            label="Bowling Avg"
+            value={typeof stats.bowlingAverage === 'number' ? stats.bowlingAverage.toFixed(2) : "0.00"}
           />
+          <StatItem label="Best Bowling" value={stats.bestBowling ?? "0/0"} />
+          <StatItem label="Catches" value={stats.catches ?? 0} />
         </div>
       </div>
 

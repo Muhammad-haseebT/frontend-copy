@@ -45,6 +45,11 @@ export const updateMatch = async (matchData, matchId) => {
   return r.data; // object
 };
 
+export const generateFixturesApi = async (tournamentId, fixtureData) => {
+  const r = await axios.post(`${BASE_URL}/tournament/${tournamentId}/generate-fixtures`, fixtureData);
+  return r.data;
+};
+
 export const getScoreCard = async (matchId, teamId) => {
   const r = await axios.get(`${BASE_URL}/match/scoreCard/${matchId}/${teamId}`);
   return r.data;

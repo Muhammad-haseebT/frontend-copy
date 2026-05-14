@@ -368,9 +368,10 @@ export default function TournamentTeams({ tournamentId, onCreateTeam }) {
           {teams.map((team) => (
             <div
               key={team.id}
-              className="bg-gray-100 rounded-xl p-3 border border-red-600"
+              className="bg-gray-100 rounded-xl p-3 border border-red-600 flex justify-between items-center"
             >
-              {team.name}
+              <span className="font-semibold">{team.name}</span>
+              {team.groupName && <span className="text-sm font-bold text-red-600">{team.groupName}</span>}
             </div>
           ))}
         </div>

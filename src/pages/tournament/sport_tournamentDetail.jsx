@@ -24,6 +24,7 @@ export default function SportTournamentDetail() {
           state.sportID,
           state.seasonID,
         );
+        console.log(response);
         setTournaments(response);
       } catch (error) {
         console.error(error);

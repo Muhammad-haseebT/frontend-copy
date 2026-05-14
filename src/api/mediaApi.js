@@ -69,3 +69,57 @@ export const getMediaByTournamentId = async (tournamentId, page, size) => {
 //         throw error;
 //     }
 // };
+
+export const getMediaByBallId = async (ballId) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/media/ball/${ballId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching ball media:", error);
+    throw error;
+  }
+};
+
+export const getMediaByMatchId = async (matchId) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/media/match/${matchId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching match media:", error);
+    throw error;
+  }
+};
+
+export const toggleFavouriteMedia = async (accountId, mediaId, matchId) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/media/favourite/toggle`, {
+      accountId,
+      mediaId,
+      matchId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error toggling favourite media:", error);
+    throw error;
+  }
+};
+
+export const getAccountFavouriteMedia = async (accountId) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/media/favourite/account/${accountId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching account favourite media:", error);
+    throw error;
+  }
+};
+
+export const getMatchFavouriteMediaIds = async (matchId, accountId) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/media/favourite/match/${matchId}/account/${accountId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching match favourite media ids:", error);
+    return [];
+  }
+};

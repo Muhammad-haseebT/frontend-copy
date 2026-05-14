@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import Cookies from "js-cookie";
-import { ArrowLeft, Dot, Camera, Star, Heart } from "lucide-react";
+import { ArrowLeft, Dot, Camera, Star, Heart, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BiCricketBall } from "react-icons/bi";
+import axios from "axios";
 
 import {
   handleRuns,
@@ -19,6 +20,14 @@ import MatchBalls from "./modals/MatchBalls";
 import Media from "./modals/Media";
 import FavouritePlayerModal from "./modals/FavouritePlayerModal";
 import MoreModal from "./modals/MoreModal";
+import { 
+  getMediaByMatchId, 
+  getMatchFavouriteMediaIds, 
+  getAccountFavouriteMedia, 
+  toggleFavouriteMedia 
+} from "../../../api/mediaApi";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
+import LoadingSpinner from "../../common/LoadingSpinner";
 
 // ─── Helper: close all modals ────────────────────────────────────
 const ALL_MODALS_OFF = {
@@ -51,9 +60,9 @@ export default function CricketScoring({
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const nav = ["Scoring", "Summary", "Scorecard", "Balls", "Info"];
+  const nav = ["Scoring", "Summary", "Scorecard", "Balls", "Media", "Favourites", "Info"];
   const [activeTab, setActiveTab] = useState("Scoring");
-
+  const firstInningsRef = useRef(true);
   const [user, setUser] = useState("");
   const [strikerId, setStrikerId] = useState(null);
   const [nonStrikerId, setNonStrikerId] = useState(null);
@@ -145,8 +154,20 @@ export default function CricketScoring({
   const [team1Scorecard, setTeam1Scorecard] = useState([]);
   const [cardFor, setCardFor] = useState(1);
   const [scorecardLoading, setScorecardLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [battingTeamId, setBattingTeamId] = useState(bTeamId);
   const [selectedBallId, setSelectedBallId] = useState(null);
+
+  // Media Tab States
+  const [matchMedia, setMatchMedia] = useState([]);
+  const [favMediaIds, setFavMediaIds] = useState(new Set());
+  const [mediaLoading, setMediaLoading] = useState(false);
+
+  // Favourites Tab States
+  const [accountFavMedia, setAccountFavMedia] = useState([]);
+  const [favLoading, setFavLoading] = useState(false);
+
+  const accountId = JSON.parse(Cookies.get("account") || "{}")?.id;
 
   useEffect(() => {
     try {
@@ -235,7 +256,7 @@ export default function CricketScoring({
     setIsSuperOverInnings(restoredSuperOverInnings);
 
     const originalBowlingTeamId = bTeamId === team1Id ? team2Id : team1Id;
-    
+
     if (restoredSuperOverInnings === 2) {
       setBattingTeamId(bTeamId);
       setBowlingTeamId(originalBowlingTeamId);
@@ -265,15 +286,15 @@ export default function CricketScoring({
       ws.onmessage = async (event) => {
         const receivedData = JSON.parse(event.data);
         console.log(receivedData);
-
-        const inningsChanged = data.firstInnings !== receivedData.firstInnings;
-
+        const inningsChanged =
+          firstInningsRef.current !== receivedData.firstInnings;
+        firstInningsRef.current = receivedData.firstInnings; // keep ref in sync
         if (inningsChanged) {
           setAvailableBatters([]);
           setAvailableBowlers([]);
           player1IdRef.current = null;
           player2IdRef.current = null;
-          await fetchTeamPlayers();
+          await fetchTeamPlayers(); // ← now actually runs for 2nd innings
         }
 
         const normalized = normalizeStats(receivedData);
@@ -344,6 +365,7 @@ export default function CricketScoring({
         receivedData.wickets === 0 &&
         receivedData.runs === 0
       ) {
+        fetchTeamPlayers();
         openModal("playerSelectModal");
       }
       return;
@@ -368,12 +390,9 @@ export default function CricketScoring({
         return;
       }
 
-      if (receivedData.balls === 0 && receivedData.overs !== 0)
-         {
-          if(!receivedData.superOver)
-            openModal("bowlerModal");
-          else
-            openModal("end_InningsAndSuperOverModal");
+      if (receivedData.balls === 0 && receivedData.overs !== 0) {
+        if (!receivedData.superOver) openModal("bowlerModal");
+        else openModal("end_InningsAndSuperOverModal");
         return;
       }
 
@@ -585,6 +604,79 @@ export default function CricketScoring({
     }
   };
 
+  const fetchMatchMedia = async () => {
+    setMediaLoading(true);
+    try {
+      const [media, favIds] = await Promise.all([
+        getMediaByMatchId(matchId),
+        accountId ? getMatchFavouriteMediaIds(matchId, accountId) : Promise.resolve([])
+      ]);
+      console.log("Fetched Match Media:", media);
+      console.log("Fetched Fav IDs:", favIds);
+      setMatchMedia(media || []);
+      setFavMediaIds(new Set(favIds || []));
+    } catch (err) {
+      console.error("Error fetching match media:", err);
+    } finally {
+      setMediaLoading(false);
+    }
+  };
+
+  const fetchAccountFavourites = async () => {
+    if (!accountId) return;
+    setFavLoading(true);
+    try {
+      const data = await getAccountFavouriteMedia(accountId);
+      setAccountFavMedia(data || []);
+    } catch (err) {
+      console.error("Error fetching account favourites:", err);
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
+  const handleMediaFavouriteToggle = async (mediaId) => {
+    if (!accountId) {
+      alert("Please login to favourite media");
+      return;
+    }
+
+    // Optimistic UI update for Media tab
+    setFavMediaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(mediaId)) next.delete(mediaId);
+      else next.add(mediaId);
+      return next;
+    });
+
+    try {
+      await toggleFavouriteMedia(accountId, mediaId, matchId);
+    } catch (err) {
+      // Revert on error
+      setFavMediaIds(prev => {
+        const next = new Set(prev);
+        if (next.has(mediaId)) next.delete(mediaId);
+        else next.add(mediaId);
+        return next;
+      });
+      console.error("Toggle error:", err);
+    }
+  };
+
+  const handleFavTabToggle = async (mediaId) => {
+    if (!accountId) return;
+
+    // Optimistic UI update for Favourites tab
+    setAccountFavMedia(prev => prev.filter(m => m.id !== mediaId));
+
+    try {
+      await toggleFavouriteMedia(accountId, mediaId, -1);
+    } catch (err) {
+      console.error("Toggle error:", err);
+      fetchAccountFavourites(); // Refresh on error
+    }
+  };
+
   // Destructure for convenience
   const {
     mainModal,
@@ -612,6 +704,30 @@ export default function CricketScoring({
         : regularBattingTeamName;
   const inningsLabel = data.firstInnings ? "First Innings" : "Second Innings";
 
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      const BASE_URL = import.meta.env.VITE_BASE_URL;
+      const res = await axios.get(
+        `${BASE_URL}/match/${matchId}/scorecard/pdf`,
+        {
+          responseType: "blob",
+        },
+      );
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `scorecard-${matchId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading PDF:", err);
+      alert("Failed to download PDF.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <>
       {/* ── Header ── */}
@@ -637,6 +753,8 @@ export default function CricketScoring({
                     onClick={() => {
                       setActiveTab(item);
                       if (item === "Scorecard") fetchScorecard(1);
+                      if (item === "Media") fetchMatchMedia();
+                      if (item === "Favourites") fetchAccountFavourites();
                     }}
                   >
                     {item}
@@ -651,6 +769,8 @@ export default function CricketScoring({
                     onClick={() => {
                       setActiveTab(item);
                       if (item === "Scorecard") fetchScorecard(1);
+                      if (item === "Media") fetchMatchMedia();
+                      if (item === "Favourites") fetchAccountFavourites();
                     }}
                   >
                     {item}
@@ -1215,28 +1335,39 @@ export default function CricketScoring({
               <h1 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-red-600 pb-2">
                 Match Scorecard
               </h1>
-              <div className="flex gap-2 mb-6 bg-gray-200 p-1 rounded-xl w-fit">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2 bg-gray-200 p-1 rounded-xl w-fit">
+                  <button
+                    disabled={scorecardLoading}
+                    onClick={() => fetchScorecard(1)}
+                    className={`px-6 py-2 rounded-lg font-semibold shadow-sm transition-all active:scale-95 border ${
+                      cardFor === 1
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-red-600 border-red-100 hover:bg-red-50"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {team1Name}
+                  </button>
+                  <button
+                    disabled={scorecardLoading}
+                    onClick={() => fetchScorecard(2)}
+                    className={`px-6 py-2 rounded-lg font-semibold shadow-sm transition-all active:scale-95 border ${
+                      cardFor === 2
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-red-600 border-red-100 hover:bg-red-50"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {team2Name}
+                  </button>
+                </div>
+
                 <button
-                  disabled={scorecardLoading}
-                  onClick={() => fetchScorecard(1)}
-                  className={`px-6 py-2 rounded-lg font-semibold shadow-sm transition-all active:scale-95 border ${
-                    cardFor === 1
-                      ? "bg-red-600 text-white border-red-600"
-                      : "bg-white text-red-600 border-red-100 hover:bg-red-50"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  onClick={handleExportPdf}
+                  disabled={isExporting}
+                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold shadow-sm hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {team1Name}
-                </button>
-                <button
-                  disabled={scorecardLoading}
-                  onClick={() => fetchScorecard(2)}
-                  className={`px-6 py-2 rounded-lg font-semibold shadow-sm transition-all active:scale-95 border ${
-                    cardFor === 2
-                      ? "bg-red-600 text-white border-red-600"
-                      : "bg-white text-red-600 border-red-100 hover:bg-red-50"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {team2Name}
+                  <Download size={20} />
+                  {isExporting ? "Generating PDF..." : "Export PDF"}
                 </button>
               </div>
 
@@ -1361,6 +1492,126 @@ export default function CricketScoring({
               team1Id={team1Id}
               team2Id={team2Id}
             />
+          )}
+
+          {/* ══ MEDIA TAB ══ */}
+          {activeTab === "Media" && (
+            <div className="max-w-4xl mx-auto p-4">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-red-600 pb-1">
+                  Match Media
+                </h1>
+                <span className="text-gray-500 text-sm">
+                  {matchMedia.length} items
+                </span>
+              </div>
+
+              {mediaLoading ? (
+                <div className="flex justify-center py-20">
+                  <LoadingSpinner size="large" />
+                </div>
+              ) : matchMedia.length === 0 ? (
+                <div className="bg-gray-50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
+                  <Camera className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 font-medium">No media uploaded for this match yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {matchMedia.map((m) => {
+                    const isFav = favMediaIds.has(m.id);
+                    const isVideo = m.fileType?.includes("video");
+                    return (
+                      <div key={m.id} className="relative group bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 transition-all hover:shadow-lg">
+                        <div className="aspect-square relative">
+                          {isVideo ? (
+                            <video src={m.url} controls className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={m.url} className="w-full h-full object-cover" alt="match" />
+                          )}
+                          <button
+                            onClick={() => handleMediaFavouriteToggle(m.id)}
+                            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-sm z-10 hover:scale-110 transition-transform"
+                          >
+                            {isFav ? (
+                              <FaHeart className="text-red-500 text-lg" />
+                            ) : (
+                              <FaRegHeart className="text-gray-400 text-lg" />
+                            )}
+                          </button>
+                        </div>
+                        {m.comment && (
+                          <div className="p-2">
+                            <p className="text-xs text-gray-600 line-clamp-2 italic">"{m.comment}"</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ FAVOURITES TAB ══ */}
+          {activeTab === "Favourites" && (
+            <div className="max-w-4xl mx-auto p-4">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-red-600 pb-1 flex items-center gap-2">
+                  <Star className="text-yellow-500 fill-yellow-500" /> My Favourites
+                </h1>
+                <span className="text-gray-500 text-sm">
+                  {accountFavMedia.length} items
+                </span>
+              </div>
+
+              {!accountId ? (
+                <div className="bg-red-50 p-6 rounded-xl border border-red-100 text-center">
+                  <p className="text-red-600 font-medium">Please login to see your favourites.</p>
+                </div>
+              ) : favLoading ? (
+                <div className="flex justify-center py-20">
+                  <LoadingSpinner size="large" />
+                </div>
+              ) : accountFavMedia.length === 0 ? (
+                <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-gray-100">
+                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FaRegHeart className="text-gray-300 text-4xl" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">No favourites yet</h3>
+                  <p className="text-gray-500 max-w-xs mx-auto">
+                    Tap ❤️ on media in the Media tab to save them here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {accountFavMedia.map((m) => {
+                    const isVideo = m.fileType?.includes("video");
+                    return (
+                      <div key={m.id} className="relative group bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 transition-all hover:shadow-lg">
+                        <div className="aspect-square relative">
+                          {isVideo ? (
+                            <video src={m.url} controls className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={m.url} className="w-full h-full object-cover" alt="fav" />
+                          )}
+                          <button
+                            onClick={() => handleFavTabToggle(m.id)}
+                            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-sm z-10"
+                          >
+                            <FaHeart className="text-red-500 text-lg" />
+                          </button>
+                        </div>
+                        {m.comment && (
+                          <div className="p-2">
+                            <p className="text-xs text-gray-600 line-clamp-2 italic">"{m.comment}"</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {/* ══ INFO TAB ══ */}

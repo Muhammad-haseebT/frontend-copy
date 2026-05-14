@@ -145,11 +145,11 @@ export default function CreateTournament() {
                 >
                   <input
                     type="radio"
-                    name="stage"
+                    name="tournamentStage"
                     value={option.value}
-                    checked={formData.stage === option.value}
+                    checked={formData.tournamentStage === option.value}
                     onChange={(e) =>
-                      setFormData({ ...formData, stage: e.target.value })
+                      setFormData({ ...formData, tournamentStage: e.target.value })
                     }
                     className="w-5 h-5  border border-red-600"
                   />
@@ -189,38 +189,40 @@ export default function CreateTournament() {
             </div>
           </div>
 
-          {/* Tournament Type */}
-          <div>
-            <label className="text-lg font-semibold mb-2 block">
-              Tournament Type
-            </label>
-            <div className="space-y-2">
-              {[
-                { value: "hard", label: "Hard" },
-                { value: "tennis", label: "Tennis" },
-              ].map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-3 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="tournamentType"
-                    value={option.value}
-                    checked={formData.tournamentType === option.value}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        tournamentType: e.target.value,
-                      })
-                    }
-                    className="w-5 h-5 border border-red-600"
-                  />
-                  <span className="text-lg">{option.label}</span>
-                </label>
-              ))}
+          {/* Tournament Type - Only show for Cricket (sportId == 1) */}
+          {state.sportID == 1 && (
+            <div>
+              <label className="text-lg font-semibold mb-2 block">
+                Tournament Type
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: "hard", label: "Hard" },
+                  { value: "tennis", label: "Tennis" },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="tournamentType"
+                      value={option.value}
+                      checked={formData.tournamentType === option.value}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          tournamentType: e.target.value,
+                        })
+                      }
+                      className="w-5 h-5 border border-red-600"
+                    />
+                    <span className="text-lg">{option.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Email */}
           <div>
