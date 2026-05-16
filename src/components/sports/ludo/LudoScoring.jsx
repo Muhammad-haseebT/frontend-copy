@@ -10,6 +10,8 @@ import {
 } from "../common/ScoringUI";
 import FavouritePlayerModal from "../cricket/modals/FavouritePlayerModal";
 import { getMatchAccess } from "../../../utils/accessControl";
+import MilestonePopup from "../../common/MilestonePopup";
+import { detectLudoMilestone } from "../../../utils/milestoneDetector";
 
 function useMatchTimer(startTime, status) {
   const [elapsed, setElapsed] = useState(0);
@@ -80,6 +82,11 @@ export default function LudoScoring({
   const [modal, setModal] = useState(null);
   const [showFav, setShowFav] = useState(false);
 
+  // ── Milestone popup ───────────────────────────────────────────────────────
+  const [milestone, setMilestone] = useState(null);
+  const onDismissRef = useRef(() => setMilestone(null));
+  const prevDataRef = useRef(null);
+
   const timer = useMatchTimer(score.matchStartTime, score.status);
   const isCompleted = score.status === "COMPLETED";
 
@@ -107,7 +114,13 @@ export default function LudoScoring({
     ws.onmessage = (e) => {
       const d = JSON.parse(e.data);
       console.log(d);
-      setScore((prev) => ({ ...prev, ...d }));
+      setScore((prev) => {
+        const next = { ...prev, ...d };
+        const detected = detectLudoMilestone(next, prevDataRef.current);
+        if (detected) setMilestone(detected);
+        prevDataRef.current = next;
+        return next;
+      });
       setWaiting(false);
       if (d.comment === "UNDO") showToast("↩ Undo done", "info");
       if (d.status === "COMPLETED") {
@@ -159,6 +172,13 @@ export default function LudoScoring({
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {/* ── Milestone Popup ── */}
+      {milestone && (
+        <MilestonePopup
+          milestone={milestone}
+          onDismiss={onDismissRef.current}
+        />
+      )}
       {toast && (
         <div
           className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 rounded-2xl text-sm font-bold shadow-2xl text-white ${

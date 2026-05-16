@@ -19,6 +19,8 @@ import {
   UI_CLASSES,
 } from "../common/ScoringUI";
 import { getMatchAccess } from "../../../utils/accessControl";
+import MilestonePopup from "../../common/MilestonePopup";
+import { detectFutsalMilestone } from "../../../utils/milestoneDetector";
 
 const FOUL_LIMIT = 5;
 
@@ -120,6 +122,11 @@ export default function FutsalScoring({
   const [team1Active, setTeam1Active] = useState([]); // ← ADD
   const [team2Active, setTeam2Active] = useState([]);
 
+  // ── Milestone popup ───────────────────────────────────────────────────────
+  const [milestone, setMilestone] = useState(null);
+  const onDismissRef = useRef(() => setMilestone(null));
+  const prevDataRef = useRef(null);
+
   useEffect(() => {
     const access = getMatchAccess(scorerId, mediaScorerUsername);
     isAdminRef.current = access.canEditMatch;
@@ -161,7 +168,15 @@ export default function FutsalScoring({
     };
     ws.onmessage = (e) => {
       const d = JSON.parse(e.data);
-      setScore((prev) => ({ ...prev, ...d }));
+      setScore((prev) => {
+        // ── Milestone detection (undo-safe) ────────────────────────────────
+        const next = { ...prev, ...d };
+        const detected = detectFutsalMilestone(next, prevDataRef.current);
+        if (detected) setMilestone(detected);
+        prevDataRef.current = next;
+        // ─────────────────────────────────────────────────────────────────
+        return next;
+      });
       console.log(d);
       setIsWaiting(false);
       if (d.team1OnField?.length) setTeam1Active(d.team1OnField);
@@ -267,6 +282,13 @@ export default function FutsalScoring({
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {/* ── Milestone Popup ── */}
+      {milestone && (
+        <MilestonePopup
+          milestone={milestone}
+          onDismiss={onDismissRef.current}
+        />
+      )}
       {/* Toast */}
       {toast && (
         <div

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, AlertTriangle, CloudRain, Zap } from "lucide-react";
+import { X, AlertTriangle, CloudRain, Zap, RefreshCcw } from "lucide-react";
 
 /**
  * MORE Modal — Cricket admin options
@@ -16,6 +16,7 @@ export default function MoreModal({
   onPenalty,
   onDLS,
   onSuperOver,
+  onSubstitute,
   isSuperOverPending = false,
   isSecondInnings = false,
 }) {
@@ -64,6 +65,17 @@ export default function MoreModal({
                 color="blue"
               />
             )}
+
+            <MoreOption
+              icon={<RefreshCcw size={22} className="text-green-500" />}
+              title="Player Substitution"
+              desc="Substitute an injured player"
+              onClick={() => {
+                onSubstitute();
+                onClose();
+              }}
+              color="green"
+            />
 
             {/* Super Over — only show when backend detected a tie */}
             {isSuperOverPending && (
@@ -175,6 +187,7 @@ function MoreOption({ icon, title, desc, onClick, color, highlight }) {
   const border = {
     orange: "border-orange-200 hover:border-orange-400",
     blue: "border-blue-200 hover:border-blue-400",
+    green: "border-green-200 hover:border-green-400",
     yellow: "border-yellow-300 hover:border-yellow-500",
   };
   const bg = highlight ? "bg-yellow-50" : "bg-white";

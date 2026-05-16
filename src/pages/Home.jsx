@@ -29,7 +29,10 @@ export default function Home() {
 
         response = await getMatchBySportAndStatus("All", "UPCOMING");
         setUpcoming(response.data);
-        setUsername(JSON.parse(Cookies.get("account")).name);
+        const accountCookie = Cookies.get("account");
+        if (accountCookie) {
+          setUsername(JSON.parse(accountCookie).name);
+        }
         setSearchUpcoming(response.data);
       } catch (err) {
         console.error(err);

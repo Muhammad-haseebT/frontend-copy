@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { startmatch, abondonMatch } from "../../api/matchApi";
@@ -99,7 +99,7 @@ export default function MatchScoreRoute() {
   const isTOW = currentSport === "Tug Of War";
   const isLudo = currentSport === "Ludo";
   const isChess = currentSport === "Chess";
-  const needsLineup = isFutsal || isVB || isBD || isTT || isLudo || isChess;
+  const needsLineup = isCricket || isFutsal || isVB || isBD || isTT || isLudo || isChess;
   const { canEditMatch } = getMatchAccess(
     match?.scorerId,
     match?.mediaScorerUsername,
@@ -521,6 +521,106 @@ export default function MatchScoreRoute() {
               ))}
             </div>
           </div>
+          {/* ── Playing XI Selection ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <User size={14} className="text-red-600" />
+              <span className="text-red-600">
+                Select Playing XI 
+                <span className="text-slate-400 font-normal ml-1">(optional)</span>
+              </span>
+            </label>
+
+            {!squadLoaded ? (
+              <div className="text-xs text-slate-400 text-center py-4 bg-white rounded-2xl border border-slate-100">
+                Loading squad...
+              </div>
+            ) : (
+              <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+                <div className="flex gap-3">
+
+                  {/* Team 1 */}
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-red-600 mb-2">
+                      {team1Name}
+                      <span className="text-slate-400 font-medium ml-1">
+                        ({team1Playing.size}/11)
+                      </span>
+                    </p>
+                    <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
+                      {squadTeam1.map((p) => {
+                        const sel = team1Playing.has(p.id);
+                        const maxed = !sel && team1Playing.size >= 11;
+                        return (
+                          <button
+                            key={p.id}
+                            disabled={maxed}
+                            onClick={() => togglePlayer(setTeam1Playing, p.id)}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                              sel
+                                ? "bg-red-600 text-white border-red-600"
+                                : maxed
+                                  ? "bg-slate-100 dark:bg-slate-700 text-slate-300 border-transparent cursor-not-allowed"
+                                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300"
+                            }`}
+                          >
+                            {sel ? "✓ " : ""}{p.name}
+                          </button>
+                        );
+                      })}
+                      {squadTeam1.length === 0 && (
+                        <p className="text-xs text-slate-400 italic p-2">
+                          No players in squad
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Team 2 */}
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-blue-600 mb-2">
+                      {team2Name}
+                      <span className="text-slate-400 font-medium ml-1">
+                        ({team2Playing.size}/11)
+                      </span>
+                    </p>
+                    <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
+                      {squadTeam2.map((p) => {
+                        const sel = team2Playing.has(p.id);
+                        const maxed = !sel && team2Playing.size >= 11;
+                        return (
+                          <button
+                            key={p.id}
+                            disabled={maxed}
+                            onClick={() => togglePlayer(setTeam2Playing, p.id)}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                              sel
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : maxed
+                                  ? "bg-slate-100 dark:bg-slate-700 text-slate-300 border-transparent cursor-not-allowed"
+                                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-blue-300"
+                            }`}
+                          >
+                            {sel ? "✓ " : ""}{p.name}
+                          </button>
+                        );
+                      })}
+                      {squadTeam2.length === 0 && (
+                        <p className="text-xs text-slate-400 italic p-2">
+                          No players in squad
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-400 text-center mt-3">
+                  If left empty, all squad players will be available
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <User size={14} /> Scorer Username
@@ -550,6 +650,8 @@ export default function MatchScoreRoute() {
                   overs: match?.overs,
                   team1Id: t1Id,
                   team2Id: t2Id,
+                  team1PlayingIds: team1Playing.size > 0 ? [...team1Playing] : undefined,
+                  team2PlayingIds: team2Playing.size > 0 ? [...team2Playing] : undefined,
                 });
                 navigate(-1);
               } catch (err) {

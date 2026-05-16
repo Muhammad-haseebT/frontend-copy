@@ -18,7 +18,16 @@ function Login() {
 
     try {
       const res = await login({ username, password });
-      Cookies.set("account", JSON.stringify(res.data));
+      
+      // Separate the huge base64 photo to avoid exceeding the 4KB browser cookie limit
+      const { profilePhotoUrl, ...cookieData } = res.data;
+      Cookies.set("account", JSON.stringify(cookieData), { expires: 7, path: "/" });
+      
+      if (profilePhotoUrl) {
+        localStorage.setItem("profilePhotoUrl", profilePhotoUrl);
+      } else {
+        localStorage.removeItem("profilePhotoUrl");
+      }
 
       if (res.status === 200) {
         toast.success("Login successful!");

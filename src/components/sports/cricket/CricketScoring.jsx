@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import Cookies from "js-cookie";
-import { ArrowLeft, Dot, Camera, Star, Heart, Download } from "lucide-react";
+import { ArrowLeft, Dot, Camera, Star, Heart, Download, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BiCricketBall } from "react-icons/bi";
 import axios from "axios";
@@ -20,6 +20,7 @@ import MatchBalls from "./modals/MatchBalls";
 import Media from "./modals/Media";
 import FavouritePlayerModal from "./modals/FavouritePlayerModal";
 import MoreModal from "./modals/MoreModal";
+import SubstituteModal from "./modals/SubstituteModal";
 import { 
   getMediaByMatchId, 
   getMatchFavouriteMediaIds, 
@@ -28,6 +29,8 @@ import {
 } from "../../../api/mediaApi";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import LoadingSpinner from "../../common/LoadingSpinner";
+import MilestonePopup from "../../common/MilestonePopup";
+import { detectCricketMilestone } from "../../../utils/milestoneDetector";
 
 // ─── Helper: close all modals ────────────────────────────────────
 const ALL_MODALS_OFF = {
@@ -77,6 +80,12 @@ export default function CricketScoring({
   const socketRef = useRef(null);
   const isEndingMatch = useRef(false);
   const sentEndInningsRef = useRef(false);
+
+  // ── Milestone popup ───────────────────────────────────────────────────────
+  const [milestone, setMilestone] = useState(null);
+  /** Stable ref so the popup's useEffect always has the latest dismiss fn */
+  const onDismissRef = useRef(() => setMilestone(null));
+  const prevDataRef  = useRef(null); // tracks previous WebSocket payload
   const rolesRef = useRef({
     isAdmin: false,
     isScorer: false,
@@ -96,6 +105,7 @@ export default function CricketScoring({
     favPlayerModal: false,
     end_InningsAndSuperOverModal: false,
   });
+  const [subModalOpen, setSubModalOpen] = useState(false);
   const [availableBatters, setAvailableBatters] = useState([]); // not dismissed, not on crease
   const [availableBowlers, setAvailableBowlers] = useState([]); // excl. last-over bowler
 
@@ -272,7 +282,6 @@ export default function CricketScoring({
     setBattingTeamId(bTeamId);
 
     if (status === "LIVE") {
-      fetchTeamPlayers();
       const socketUrl = import.meta.env.VITE_SOCKET_URL + "?matchId=" + matchId;
       const ws = new WebSocket(socketUrl);
 
@@ -294,21 +303,43 @@ export default function CricketScoring({
           setAvailableBowlers([]);
           player1IdRef.current = null;
           player2IdRef.current = null;
-          await fetchTeamPlayers(); // ← now actually runs for 2nd innings
         }
 
         const normalized = normalizeStats(receivedData);
+
+        // ── Milestone detection ───────────────────────────────────────────
+        // Must run BEFORE setData so prevDataRef still has previous payload.
+        const detected = detectCricketMilestone(
+          normalized.cricketBalls,
+          normalized,
+          prevDataRef.current
+        );
+        if (detected) {
+          setMilestone(detected); // replaces any active popup immediately
+        }
+        prevDataRef.current = normalized;
+        // ─────────────────────────────────────────────────────────────────
+
         const superOverRestored = hydrateSuperOverState(normalized);
+        
+        if (!superOverRestored) {
+          if (normalized.firstInnings !== false) {
+            setBattingTeamId(bTeamId);
+            setBowlingTeamId(bTeamId === team1Id ? team2Id : team1Id);
+          } else {
+            setBattingTeamId(bTeamId === team1Id ? team2Id : team1Id);
+            setBowlingTeamId(bTeamId);
+          }
+        }
+
         setData(normalized);
         setIsWaiting(false);
 
-        if (!inningsChanged) {
-          if (Array.isArray(normalized.availableBatters)) {
-            setAvailableBatters(normalized.availableBatters);
-          }
-          if (Array.isArray(normalized.availableBowlers)) {
-            setAvailableBowlers(normalized.availableBowlers);
-          }
+        if (Array.isArray(normalized.availableBatters)) {
+          setAvailableBatters(normalized.availableBatters);
+        }
+        if (Array.isArray(normalized.availableBowlers)) {
+          setAvailableBowlers(normalized.availableBowlers);
         }
 
         // ✅ PEHLE matchEnd check karo — handleModalLogic se pehle
@@ -452,9 +483,9 @@ export default function CricketScoring({
       return;
     }
 
-    const player1 = team1Players.find((p) => p.id == strikerId);
-    const player2 = team1Players.find((p) => p.id == nonStrikerId);
-    const bowlerPlayer = team2Players.find((p) => p.id == bowlerId);
+    const player1 = availableBatters.find((p) => p.id == strikerId) || team1Players.find((p) => p.id == strikerId);
+    const player2 = availableBatters.find((p) => p.id == nonStrikerId) || team1Players.find((p) => p.id == nonStrikerId);
+    const bowlerPlayer = availableBowlers.find((p) => p.id == bowlerId) || team2Players.find((p) => p.id == bowlerId) || team1Players.find((p) => p.id == bowlerId);
 
     player1IdRef.current = Number(strikerId);
     player2IdRef.current = Number(nonStrikerId);
@@ -499,13 +530,7 @@ export default function CricketScoring({
       return;
     }
 
-    const bowlerPlayer = (
-      isSuperOver && availableBowlers.length > 0
-        ? availableBowlers
-        : data.firstInnings
-          ? team2Players
-          : team1Players
-    ).find((p) => p.id == bowlerId);
+    const bowlerPlayer = availableBowlers.find((p) => p.id == bowlerId) || team2Players.find((p) => p.id == bowlerId) || team1Players.find((p) => p.id == bowlerId);
 
     player1IdRef.current = null;
     player2IdRef.current = null;
@@ -728,8 +753,68 @@ export default function CricketScoring({
     }
   };
 
+  const handleSharePdf = async () => {
+    try {
+      setIsExporting(true);
+      const BASE_URL = import.meta.env.VITE_BASE_URL;
+      const res = await axios.get(
+        `${BASE_URL}/match/${matchId}/scorecard/pdf`,
+        { responseType: "blob" }
+      );
+      
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const file = new File(
+        [blob], 
+        `scorecard-${matchId}.pdf`, 
+        { type: "application/pdf" }
+      );
+
+      // Check if Web Share API supports files
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Match Scorecard - ${team1Name} vs ${team2Name}`,
+          text: `Cricket Scorecard - Match #${matchId}`,
+          files: [file],
+        });
+      } else {
+        // Fallback: share the URL or just download
+        // Try sharing just text/url if files not supported
+        if (navigator.share) {
+          await navigator.share({
+            title: `Match Scorecard - ${team1Name} vs ${team2Name}`,
+            text: `Cricket Scorecard for Match #${matchId} - BIIT Sports`,
+            url: window.location.href,
+          });
+        } else {
+          // No share API — fallback to download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `scorecard-${matchId}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+          alert("Sharing not supported on this device. File downloaded instead.");
+        }
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Share error:", err);
+        alert("Failed to share scorecard.");
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <>
+      {/* ── Milestone Popup ── */}
+      {milestone && (
+        <MilestonePopup
+          milestone={milestone}
+          onDismiss={onDismissRef.current}
+        />
+      )}
       {/* ── Header ── */}
       <div className="flex items-center bg-red-600 h-16">
         <ArrowLeft
@@ -1118,14 +1203,14 @@ export default function CricketScoring({
         */}
                   {(() => {
                     const batters =
-                      isSuperOver && availableBatters.length > 0
+                      availableBatters.length > 0
                         ? availableBatters
                         : data.firstInnings
                           ? team1Players
                           : team2Players;
 
                     const bowlers =
-                      isSuperOver && availableBowlers.length > 0
+                      availableBowlers.length > 0
                         ? availableBowlers
                         : data.firstInnings
                           ? team2Players
@@ -1307,8 +1392,42 @@ export default function CricketScoring({
               onPenalty={handlePenalty}
               onDLS={handleDLS}
               onSuperOver={handleSuperOver}
+              onSubstitute={() => setSubModalOpen(true)}
               isSuperOverPending={isSuperOverPending}
               isSecondInnings={!data.firstInnings}
+            />
+          )}
+
+          {subModalOpen && (
+            <SubstituteModal
+              matchId={matchId}
+              inningsId={data.inningsId}
+              team1Id={team1Id}
+              team2Id={team2Id}
+              team1Name={team1Name}
+              team2Name={team2Name}
+              battingTeamId={battingTeamId}
+              availableBatters={availableBatters}
+              availableBowlers={availableBowlers}
+              strikerId={strikerId}
+              nonStrikerId={nonStrikerId}
+              bowlerId={bowlerId}
+              onClose={() => setSubModalOpen(false)}
+              onSuccess={(updatedScoreDTO) => {
+                setSubModalOpen(false);
+                if (updatedScoreDTO) {
+                  setData(updatedScoreDTO);
+                  if (updatedScoreDTO.batsmanId) setStrikerId(updatedScoreDTO.batsmanId);
+                  if (updatedScoreDTO.nonStrikerId) setNonStrikerId(updatedScoreDTO.nonStrikerId);
+                  if (updatedScoreDTO.bowlerId) setBowlerId(updatedScoreDTO.bowlerId);
+                  if (Array.isArray(updatedScoreDTO.availableBatters)) {
+                    setAvailableBatters(updatedScoreDTO.availableBatters);
+                  }
+                  if (Array.isArray(updatedScoreDTO.availableBowlers)) {
+                    setAvailableBowlers(updatedScoreDTO.availableBowlers);
+                  }
+                }
+              }}
             />
           )}
 
@@ -1361,14 +1480,33 @@ export default function CricketScoring({
                   </button>
                 </div>
 
-                <button
-                  onClick={handleExportPdf}
-                  disabled={isExporting}
-                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold shadow-sm hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Download size={20} />
-                  {isExporting ? "Generating PDF..." : "Export PDF"}
-                </button>
+                <div className="flex gap-2">
+                  {/* Download Button */}
+                  <button
+                    onClick={handleExportPdf}
+                    disabled={isExporting}
+                    className="flex items-center gap-2 bg-red-600 text-white 
+                               px-4 py-2 rounded-lg font-semibold shadow-sm 
+                               hover:bg-red-700 transition-colors 
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download size={18} />
+                    {isExporting ? "..." : "Download"}
+                  </button>
+
+                  {/* Share Button */}
+                  <button
+                    onClick={handleSharePdf}
+                    disabled={isExporting}
+                    className="flex items-center gap-2 bg-white border-2 
+                               border-red-600 text-red-600 px-4 py-2 rounded-lg 
+                               font-semibold shadow-sm hover:bg-red-50 transition-colors
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Share2 size={18} />
+                    Share
+                  </button>
+                </div>
               </div>
 
               {scorecardLoading ? (
@@ -1477,6 +1615,55 @@ export default function CricketScoring({
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* FALL OF WICKETS section */}
+                  <div className="mt-6">
+                    <h3 className="font-bold text-gray-700 mb-2 text-sm uppercase">
+                      Fall of Wickets
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {team1Scorecard.fallOfWickets?.map((fow, i) => (
+                        <div key={i} className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                          <span className="font-bold text-red-600">
+                            {fow.score}-{fow.wicketNumber}
+                          </span>
+                          <span className="text-gray-500 ml-1">
+                            ({fow.playerName}, {fow.over} ov)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* PARTNERSHIPS section */}
+                  <div className="mt-6">
+                    <h3 className="font-bold text-gray-700 mb-2 text-sm uppercase">
+                      Partnerships
+                    </h3>
+                    <div className="space-y-2">
+                      {team1Scorecard.partnerships?.map((p, i) => (
+                        <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                          <span className="text-xs text-gray-500 w-4">
+                            {i + 1}
+                          </span>
+                          <span className="text-xs font-medium text-gray-700 flex-1">
+                            {p.batter1} & {p.batter2}
+                          </span>
+                          <span className="text-xs font-bold text-gray-800">
+                            {p.runs} runs
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            ({p.balls} balls)
+                          </span>
+                          {p.isNotOut && (
+                            <span className="text-xs text-green-600 font-semibold">
+                              *
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}

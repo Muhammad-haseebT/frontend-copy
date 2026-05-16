@@ -12,6 +12,8 @@ import {
   UI_CLASSES,
 } from "../common/ScoringUI";
 import { getMatchAccess } from "../../../utils/accessControl";
+import MilestonePopup from "../../common/MilestonePopup";
+import { detectBadmintonMilestone } from "../../../utils/milestoneDetector";
 
 // ─── EVENT CONFIG ─────────────────────────────────────────────────
 const EV = {
@@ -121,6 +123,11 @@ export default function BadmintonScoring({
   const [mediaId, setMediaId] = useState(null);
   const [showFav, setShowFav] = useState(false);
 
+  // ── Milestone popup ───────────────────────────────────────────────────────
+  const [milestone, setMilestone] = useState(null);
+  const onDismissRef = useRef(() => setMilestone(null));
+  const prevDataRef = useRef(null);
+
   const timer = useGameTimer(score.gameStartTime, score.status);
 
   useEffect(() => {
@@ -156,12 +163,18 @@ export default function BadmintonScoring({
       console.log(d);
       if (d.team1Players?.length) setTeam1P(d.team1Players);
       if (d.team2Players?.length) setTeam2P(d.team2Players);
-      setScore((p) => ({
-        ...p,
-        ...d,
-        team1Games: Number(d.team1Games ?? p.team1Games),
-        team2Games: Number(d.team2Games ?? p.team2Games),
-      }));
+      setScore((p) => {
+        const next = {
+          ...p,
+          ...d,
+          team1Games: Number(d.team1Games ?? p.team1Games),
+          team2Games: Number(d.team2Games ?? p.team2Games),
+        };
+        const detected = detectBadmintonMilestone(next, prevDataRef.current);
+        if (detected) setMilestone(detected);
+        prevDataRef.current = next;
+        return next;
+      });
       setWaiting(false);
       if (d.comment === "UNDO") showToast("↩ Undo done", "info");
       if (d.status === "COMPLETED") {
@@ -239,6 +252,13 @@ export default function BadmintonScoring({
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {/* ── Milestone Popup ── */}
+      {milestone && (
+        <MilestonePopup
+          milestone={milestone}
+          onDismiss={onDismissRef.current}
+        />
+      )}
       {/* Toast */}
       {toast && (
         <div

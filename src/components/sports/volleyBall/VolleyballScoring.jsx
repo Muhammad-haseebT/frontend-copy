@@ -21,6 +21,8 @@ import {
   UI_CLASSES,
 } from "../common/ScoringUI";
 import { getMatchAccess } from "../../../utils/accessControl";
+import MilestonePopup from "../../common/MilestonePopup";
+import { detectVolleyballMilestone } from "../../../utils/milestoneDetector";
 
 // ─── EVENT CONFIG ─────────────────────────────────────────────────
 const EV = {
@@ -123,6 +125,11 @@ export default function VolleyballScoring({
   const [activeTab, setActiveTab] = useState("Scoring");
   const [toast, setToast] = useState(null);
   const [waiting, setWaiting] = useState(false);
+
+  // ── Milestone popup ──────────────────────────────────────────────────────────
+  const [milestone, setMilestone] = useState(null);
+  const onVbDismissRef = useRef(() => setMilestone(null));
+  const prevVbDataRef  = useRef(null); // tracks previous WS payload
   const [mediaId, setMediaId] = useState(null);
   const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [team1Active, setTeam1Active] = useState([]); // ← ADD
@@ -177,13 +184,25 @@ export default function VolleyballScoring({
       console.log(d);
       if (d.team1OnField?.length) setTeam1Active(d.team1OnField);
       if (d.team2OnField?.length) setTeam2Active(d.team2OnField);
-      setScore((p) => ({
-        ...p,
-        ...d,
-        team1Sets: Number(d.team1Sets ?? p.team1Sets),
-        team2Sets: Number(d.team2Sets ?? p.team2Sets),
-        setsToWin: Number(d.setsToWin ?? p.setsToWin) || 3,
-      }));
+
+      // Build the next score state so we can compare against prevVbData
+      setScore((p) => {
+        const next = {
+          ...p,
+          ...d,
+          team1Sets: Number(d.team1Sets ?? p.team1Sets),
+          team2Sets: Number(d.team2Sets ?? p.team2Sets),
+          setsToWin: Number(d.setsToWin ?? p.setsToWin) || 3,
+        };
+
+        // ── Milestone detection ─────────────────────────────────────────
+        const detected = detectVolleyballMilestone(next, prevVbDataRef.current);
+        if (detected) setMilestone(detected);
+        prevVbDataRef.current = next;
+        // ─────────────────────────────────────────────────────────────────
+
+        return next;
+      });
       setWaiting(false);
       if (d.comment === "UNDO") showToast("↩ Undo successful", "info");
       if (d.status === "COMPLETED") showToast("🏆 Match Complete!", "info");
@@ -262,6 +281,13 @@ export default function VolleyballScoring({
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {/* ── Milestone Popup ── */}
+      {milestone && (
+        <MilestonePopup
+          milestone={milestone}
+          onDismiss={onVbDismissRef.current}
+        />
+      )}
       {/* Toast */}
       {toast && (
         <div

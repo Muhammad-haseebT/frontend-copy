@@ -21,7 +21,16 @@ import { createTeamRequest } from "../../../api/teamApi";
 
 export const PlayerRow = ({ player }) => (
   <div className="bg-gray-100 rounded-xl p-3 flex items-center justify-between border border-red-600">
-    <div className="font-medium">{player.name}</div>
+    <div className="flex items-center gap-3">
+      {player.profilePhotoUrl ? (
+        <img src={player.profilePhotoUrl} className="w-6 h-6 rounded-full object-cover" alt={player.name} />
+      ) : (
+        <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-[10px] font-bold text-red-600">
+          {player.name?.[0]?.toUpperCase()}
+        </div>
+      )}
+      <div className="font-medium">{player.name}</div>
+    </div>
     <div className="text-sm text-gray-700">{player.status}</div>
   </div>
 );
