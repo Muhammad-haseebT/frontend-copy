@@ -47,3 +47,13 @@ export const getPlayersByTeamId = async (teamId) => {
   const r = await axios.get(`${url}/team/${teamId}/players`);
   return r.data ?? []; // array
 };
+
+export const reuseTeam = async (data) => {
+  const r = await axios.post(`${url}/team/reuse`, data);
+  return r;
+};
+
+export const getPlayerTeamHistory = async (playerId) => {
+  const r = await axios.get(`${url}/team/player/${playerId}/history`);
+  return r;
+};

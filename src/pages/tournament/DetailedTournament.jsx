@@ -163,7 +163,6 @@ export default function DetailedTournament() {
             )}
 
             {activeTab === "fixtures" && (
-              // pass fixtures prop if you fetch them; currently using sample inside component
               <TournamentFixtures
                 tournamentId={state.tournamentId}
                 sportId={state.sportId}
@@ -171,7 +170,10 @@ export default function DetailedTournament() {
             )}
 
             {activeTab === "teams" && (
-              <TournamentTeams tournamentId={state.tournamentId} />
+              <TournamentTeams
+                tournamentId={state.tournamentId}
+                sportId={state.sportId}
+              />
             )}
 
             {activeTab === "Points" && (

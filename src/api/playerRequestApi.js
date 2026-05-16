@@ -19,3 +19,7 @@ export const rejectPlayerRequest = async (playerRequestId) => {
     const r = await axios.put(`${API_URL}/playerRequest/reject/${playerRequestId}`);
     return r.data;
 };
+export const removePlayerFromTeam = async (teamId, playerId) => {
+    const r = await axios.delete(`${API_URL}/playerRequest/team/${teamId}/player/${playerId}`);
+    return r.data;
+};
