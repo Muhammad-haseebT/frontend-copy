@@ -1,6 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import Cookies from "js-cookie";
-import { ArrowLeft, Dot, Camera, Star, Heart, Download, Share2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Dot,
+  Camera,
+  Star,
+  Heart,
+  Download,
+  Share2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BiCricketBall } from "react-icons/bi";
 import axios from "axios";
@@ -21,11 +29,11 @@ import Media from "./modals/Media";
 import FavouritePlayerModal from "./modals/FavouritePlayerModal";
 import MoreModal from "./modals/MoreModal";
 import SubstituteModal from "./modals/SubstituteModal";
-import { 
-  getMediaByMatchId, 
-  getMatchFavouriteMediaIds, 
-  getAccountFavouriteMedia, 
-  toggleFavouriteMedia 
+import {
+  getMediaByMatchId,
+  getMatchFavouriteMediaIds,
+  getAccountFavouriteMedia,
+  toggleFavouriteMedia,
 } from "../../../api/mediaApi";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import LoadingSpinner from "../../common/LoadingSpinner";
@@ -63,7 +71,15 @@ export default function CricketScoring({
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const nav = ["Scoring", "Summary", "Scorecard", "Balls", "Media", "Favourites", "Info"];
+  const nav = [
+    "Scoring",
+    "Summary",
+    "Scorecard",
+    "Balls",
+    "Media",
+    "Favourites",
+    "Info",
+  ];
   const [activeTab, setActiveTab] = useState("Scoring");
   const firstInningsRef = useRef(true);
   const [user, setUser] = useState("");
@@ -85,7 +101,7 @@ export default function CricketScoring({
   const [milestone, setMilestone] = useState(null);
   /** Stable ref so the popup's useEffect always has the latest dismiss fn */
   const onDismissRef = useRef(() => setMilestone(null));
-  const prevDataRef  = useRef(null); // tracks previous WebSocket payload
+  const prevDataRef = useRef(null); // tracks previous WebSocket payload
   const rolesRef = useRef({
     isAdmin: false,
     isScorer: false,
@@ -312,7 +328,7 @@ export default function CricketScoring({
         const detected = detectCricketMilestone(
           normalized.cricketBalls,
           normalized,
-          prevDataRef.current
+          prevDataRef.current,
         );
         if (detected) {
           setMilestone(detected); // replaces any active popup immediately
@@ -321,7 +337,7 @@ export default function CricketScoring({
         // ─────────────────────────────────────────────────────────────────
 
         const superOverRestored = hydrateSuperOverState(normalized);
-        
+
         if (!superOverRestored) {
           if (normalized.firstInnings !== false) {
             setBattingTeamId(bTeamId);
@@ -445,6 +461,13 @@ export default function CricketScoring({
 
     // End_Innings — swallow echo if we just sent it
     if (receivedData.comment === "End_Innings") {
+      // Second innings End_Innings — modal dikhao, sentEndInningsRef ignore karo
+      if (receivedData.firstInnings === false) {
+        openModal("end_InningsModal");
+        return;
+      }
+
+      // First innings — echo swallow karo
       if (sentEndInningsRef.current) {
         sentEndInningsRef.current = false;
         return;
@@ -483,9 +506,16 @@ export default function CricketScoring({
       return;
     }
 
-    const player1 = availableBatters.find((p) => p.id == strikerId) || team1Players.find((p) => p.id == strikerId);
-    const player2 = availableBatters.find((p) => p.id == nonStrikerId) || team1Players.find((p) => p.id == nonStrikerId);
-    const bowlerPlayer = availableBowlers.find((p) => p.id == bowlerId) || team2Players.find((p) => p.id == bowlerId) || team1Players.find((p) => p.id == bowlerId);
+    const player1 =
+      availableBatters.find((p) => p.id == strikerId) ||
+      team1Players.find((p) => p.id == strikerId);
+    const player2 =
+      availableBatters.find((p) => p.id == nonStrikerId) ||
+      team1Players.find((p) => p.id == nonStrikerId);
+    const bowlerPlayer =
+      availableBowlers.find((p) => p.id == bowlerId) ||
+      team2Players.find((p) => p.id == bowlerId) ||
+      team1Players.find((p) => p.id == bowlerId);
 
     player1IdRef.current = Number(strikerId);
     player2IdRef.current = Number(nonStrikerId);
@@ -530,7 +560,10 @@ export default function CricketScoring({
       return;
     }
 
-    const bowlerPlayer = availableBowlers.find((p) => p.id == bowlerId) || team2Players.find((p) => p.id == bowlerId) || team1Players.find((p) => p.id == bowlerId);
+    const bowlerPlayer =
+      availableBowlers.find((p) => p.id == bowlerId) ||
+      team2Players.find((p) => p.id == bowlerId) ||
+      team1Players.find((p) => p.id == bowlerId);
 
     player1IdRef.current = null;
     player2IdRef.current = null;
@@ -634,7 +667,9 @@ export default function CricketScoring({
     try {
       const [media, favIds] = await Promise.all([
         getMediaByMatchId(matchId),
-        accountId ? getMatchFavouriteMediaIds(matchId, accountId) : Promise.resolve([])
+        accountId
+          ? getMatchFavouriteMediaIds(matchId, accountId)
+          : Promise.resolve([]),
       ]);
       console.log("Fetched Match Media:", media);
       console.log("Fetched Fav IDs:", favIds);
@@ -667,7 +702,7 @@ export default function CricketScoring({
     }
 
     // Optimistic UI update for Media tab
-    setFavMediaIds(prev => {
+    setFavMediaIds((prev) => {
       const next = new Set(prev);
       if (next.has(mediaId)) next.delete(mediaId);
       else next.add(mediaId);
@@ -678,7 +713,7 @@ export default function CricketScoring({
       await toggleFavouriteMedia(accountId, mediaId, matchId);
     } catch (err) {
       // Revert on error
-      setFavMediaIds(prev => {
+      setFavMediaIds((prev) => {
         const next = new Set(prev);
         if (next.has(mediaId)) next.delete(mediaId);
         else next.add(mediaId);
@@ -692,10 +727,11 @@ export default function CricketScoring({
     if (!accountId) return;
 
     // Optimistic UI update for Favourites tab
-    setAccountFavMedia(prev => prev.filter(m => m.id !== mediaId));
+    setAccountFavMedia((prev) => prev.filter((m) => m.id !== mediaId));
 
+    const mId = data?.matchId || matchId || -1;
     try {
-      await toggleFavouriteMedia(accountId, mediaId, -1);
+      await toggleFavouriteMedia(accountId, mediaId, mId);
     } catch (err) {
       console.error("Toggle error:", err);
       fetchAccountFavourites(); // Refresh on error
@@ -759,15 +795,13 @@ export default function CricketScoring({
       const BASE_URL = import.meta.env.VITE_BASE_URL;
       const res = await axios.get(
         `${BASE_URL}/match/${matchId}/scorecard/pdf`,
-        { responseType: "blob" }
+        { responseType: "blob" },
       );
-      
+
       const blob = new Blob([res.data], { type: "application/pdf" });
-      const file = new File(
-        [blob], 
-        `scorecard-${matchId}.pdf`, 
-        { type: "application/pdf" }
-      );
+      const file = new File([blob], `scorecard-${matchId}.pdf`, {
+        type: "application/pdf",
+      });
 
       // Check if Web Share API supports files
       if (navigator.share && navigator.canShare({ files: [file] })) {
@@ -793,7 +827,9 @@ export default function CricketScoring({
           a.download = `scorecard-${matchId}.pdf`;
           a.click();
           URL.revokeObjectURL(url);
-          alert("Sharing not supported on this device. File downloaded instead.");
+          alert(
+            "Sharing not supported on this device. File downloaded instead.",
+          );
         }
       }
     } catch (err) {
@@ -1267,7 +1303,12 @@ export default function CricketScoring({
                         </select>
 
                         <button
-                          disabled={isWaiting}
+                          disabled={
+                            isWaiting ||
+                            !strikerId ||
+                            !nonStrikerId ||
+                            !bowlerId
+                          }
                           className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={handleStartMatch}
                         >
@@ -1287,10 +1328,11 @@ export default function CricketScoring({
               <div className="bg-red-600 p-3 h-89.5">
                 <div className="flex flex-col space-y-2 space-x-2 mt-5">
                   <select
+                    value={bowlerId || ""}
                     onChange={(e) => setBowlerId(e.target.value)}
                     className="p-2 rounded-lg h-20 text-2xl bg-white text-red-600"
                   >
-                    <option>Select Bowler</option>
+                    <option value="">Select Bowler</option>
                     {availableBowlers.length > 0
                       ? availableBowlers.map((p) => (
                           <option key={p.id} value={p.id}>
@@ -1307,7 +1349,8 @@ export default function CricketScoring({
                         )}
                   </select>
                   <button
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10"
+                    disabled={!bowlerId}
+                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50"
                     onClick={confirmBowler}
                   >
                     Confirm Bowler
@@ -1358,13 +1401,20 @@ export default function CricketScoring({
                     className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10"
                     onClick={() => {
                       if (data.firstInnings === false) {
+                        isEndingMatch.current = true;
                         setIsWaiting(true);
+                        // ✅ sentEndInningsRef set mat karo second innings mein
+                        socketRef.current.send(
+                          JSON.stringify(handleEndInnings(data)),
+                        );
+                        // ✅ koi modal mat kholo — ws.onmessage pe matchEnd:true aayega
+                      } else {
+                        sentEndInningsRef.current = true;
+                        socketRef.current.send(
+                          JSON.stringify(handleEndInnings(data)),
+                        );
+                        openModal("mainModal");
                       }
-                      sentEndInningsRef.current = true;
-                      socketRef.current.send(
-                        JSON.stringify(handleEndInnings(data)),
-                      );
-                      openModal("mainModal");
                     }}
                   >
                     {data.firstInnings ? "End Innings" : "End Match"}
@@ -1417,9 +1467,12 @@ export default function CricketScoring({
                 setSubModalOpen(false);
                 if (updatedScoreDTO) {
                   setData(updatedScoreDTO);
-                  if (updatedScoreDTO.batsmanId) setStrikerId(updatedScoreDTO.batsmanId);
-                  if (updatedScoreDTO.nonStrikerId) setNonStrikerId(updatedScoreDTO.nonStrikerId);
-                  if (updatedScoreDTO.bowlerId) setBowlerId(updatedScoreDTO.bowlerId);
+                  if (updatedScoreDTO.batsmanId)
+                    setStrikerId(updatedScoreDTO.batsmanId);
+                  if (updatedScoreDTO.nonStrikerId)
+                    setNonStrikerId(updatedScoreDTO.nonStrikerId);
+                  if (updatedScoreDTO.bowlerId)
+                    setBowlerId(updatedScoreDTO.bowlerId);
                   if (Array.isArray(updatedScoreDTO.availableBatters)) {
                     setAvailableBatters(updatedScoreDTO.availableBatters);
                   }
@@ -1624,7 +1677,10 @@ export default function CricketScoring({
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {team1Scorecard.fallOfWickets?.map((fow, i) => (
-                        <div key={i} className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                        <div
+                          key={i}
+                          className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs"
+                        >
                           <span className="font-bold text-red-600">
                             {fow.score}-{fow.wicketNumber}
                           </span>
@@ -1643,7 +1699,10 @@ export default function CricketScoring({
                     </h3>
                     <div className="space-y-2">
                       {team1Scorecard.partnerships?.map((p, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2"
+                        >
                           <span className="text-xs text-gray-500 w-4">
                             {i + 1}
                           </span>
@@ -1700,7 +1759,9 @@ export default function CricketScoring({
               ) : matchMedia.length === 0 ? (
                 <div className="bg-gray-50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
                   <Camera className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">No media uploaded for this match yet.</p>
+                  <p className="text-gray-500 font-medium">
+                    No media uploaded for this match yet.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -1708,12 +1769,23 @@ export default function CricketScoring({
                     const isFav = favMediaIds.has(m.id);
                     const isVideo = m.fileType?.includes("video");
                     return (
-                      <div key={m.id} className="relative group bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 transition-all hover:shadow-lg">
+                      <div
+                        key={m.id}
+                        className="relative group bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 transition-all hover:shadow-lg"
+                      >
                         <div className="aspect-square relative">
                           {isVideo ? (
-                            <video src={m.url} controls className="w-full h-full object-cover" />
+                            <video
+                              src={m.url}
+                              controls
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <img src={m.url} className="w-full h-full object-cover" alt="match" />
+                            <img
+                              src={m.url}
+                              className="w-full h-full object-cover"
+                              alt="match"
+                            />
                           )}
                           <button
                             onClick={() => handleMediaFavouriteToggle(m.id)}
@@ -1728,7 +1800,9 @@ export default function CricketScoring({
                         </div>
                         {m.comment && (
                           <div className="p-2">
-                            <p className="text-xs text-gray-600 line-clamp-2 italic">"{m.comment}"</p>
+                            <p className="text-xs text-gray-600 line-clamp-2 italic">
+                              "{m.comment}"
+                            </p>
                           </div>
                         )}
                       </div>
@@ -1744,7 +1818,8 @@ export default function CricketScoring({
             <div className="max-w-4xl mx-auto p-4">
               <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-red-600 pb-1 flex items-center gap-2">
-                  <Star className="text-yellow-500 fill-yellow-500" /> My Favourites
+                  <Star className="text-yellow-500 fill-yellow-500" /> My
+                  Favourites
                 </h1>
                 <span className="text-gray-500 text-sm">
                   {accountFavMedia.length} items
@@ -1753,7 +1828,9 @@ export default function CricketScoring({
 
               {!accountId ? (
                 <div className="bg-red-50 p-6 rounded-xl border border-red-100 text-center">
-                  <p className="text-red-600 font-medium">Please login to see your favourites.</p>
+                  <p className="text-red-600 font-medium">
+                    Please login to see your favourites.
+                  </p>
                 </div>
               ) : favLoading ? (
                 <div className="flex justify-center py-20">
@@ -1764,7 +1841,9 @@ export default function CricketScoring({
                   <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FaRegHeart className="text-gray-300 text-4xl" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700 mb-2">No favourites yet</h3>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">
+                    No favourites yet
+                  </h3>
                   <p className="text-gray-500 max-w-xs mx-auto">
                     Tap ❤️ on media in the Media tab to save them here.
                   </p>
@@ -1774,12 +1853,23 @@ export default function CricketScoring({
                   {accountFavMedia.map((m) => {
                     const isVideo = m.fileType?.includes("video");
                     return (
-                      <div key={m.id} className="relative group bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 transition-all hover:shadow-lg">
+                      <div
+                        key={m.id}
+                        className="relative group bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 transition-all hover:shadow-lg"
+                      >
                         <div className="aspect-square relative">
                           {isVideo ? (
-                            <video src={m.url} controls className="w-full h-full object-cover" />
+                            <video
+                              src={m.url}
+                              controls
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <img src={m.url} className="w-full h-full object-cover" alt="fav" />
+                            <img
+                              src={m.url}
+                              className="w-full h-full object-cover"
+                              alt="fav"
+                            />
                           )}
                           <button
                             onClick={() => handleFavTabToggle(m.id)}
@@ -1790,7 +1880,9 @@ export default function CricketScoring({
                         </div>
                         {m.comment && (
                           <div className="p-2">
-                            <p className="text-xs text-gray-600 line-clamp-2 italic">"{m.comment}"</p>
+                            <p className="text-xs text-gray-600 line-clamp-2 italic">
+                              "{m.comment}"
+                            </p>
                           </div>
                         )}
                       </div>

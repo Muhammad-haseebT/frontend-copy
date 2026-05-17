@@ -106,6 +106,8 @@ export default function PlayerComparisonPage() {
   const [players, setPlayers] = useState([]);
   const [player1Id, setPlayer1Id] = useState("");
   const [player2Id, setPlayer2Id] = useState("");
+  const [search1, setSearch1] = useState("");
+  const [search2, setSearch2] = useState("");
   const [activeSport, setActiveSport] = useState("cricket");
   const [stats1, setStats1] = useState(null);
   const [stats2, setStats2] = useState(null);
@@ -219,13 +221,22 @@ export default function PlayerComparisonPage() {
         <div className="md:col-span-3 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Player 1</label>
+             <input
+               type="text"
+               placeholder="Filter Player 1..."
+               value={search1}
+               onChange={(e) => setSearch1(e.target.value)}
+               className="w-full mb-2 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+             />
              <select
                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none appearance-none font-medium cursor-pointer"
                value={player1Id}
                onChange={(e) => setPlayer1Id(e.target.value)}
              >
                <option value="">Select Player</option>
-               {players.map((p) => (
+               {players
+                 .filter((p) => String(p.id) !== String(player2Id) && (p.name || p.account?.name || "").toLowerCase().includes(search1.toLowerCase()))
+                 .map((p) => (
                  <option key={p.id} value={p.id}>{p.name || p.account?.name}</option>
                ))}
              </select>
@@ -240,13 +251,22 @@ export default function PlayerComparisonPage() {
         <div className="md:col-span-3 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Player 2</label>
+             <input
+               type="text"
+               placeholder="Filter Player 2..."
+               value={search2}
+               onChange={(e) => setSearch2(e.target.value)}
+               className="w-full mb-2 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+             />
              <select
                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none appearance-none font-medium cursor-pointer"
                value={player2Id}
                onChange={(e) => setPlayer2Id(e.target.value)}
              >
                <option value="">Select Player</option>
-               {players.map((p) => (
+               {players
+                 .filter((p) => String(p.id) !== String(player1Id) && (p.name || p.account?.name || "").toLowerCase().includes(search2.toLowerCase()))
+                 .map((p) => (
                  <option key={p.id} value={p.id}>{p.name || p.account?.name}</option>
                ))}
              </select>

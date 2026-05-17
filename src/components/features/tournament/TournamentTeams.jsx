@@ -179,7 +179,15 @@ const ReuseTeamModal = ({ tournamentId, onClose, onSuccess }) => {
 };
 
 export default function TournamentTeams({ tournamentId, onCreateTeam, sportId }) {
-  const [tab, setTab] = useState("teams");
+  const account = useMemo(() => {
+    try {
+      return JSON.parse(Cookies.get("account") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const [tab, setTab] = useState(account.id ? "myTeam" : "teams");
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -191,7 +199,6 @@ export default function TournamentTeams({ tournamentId, onCreateTeam, sportId })
   const [myTeam, setMyTeam] = useState(null);
   const [playerText, setPlayerText] = useState("");
 
-  const account = JSON.parse(Cookies.get("account") || "{}");
   const isCreator = myTeam?.creatorPlayerId === account.playerId || myTeam?.creatorId === account.id;
   const canEdit = isCreator && (myTeam?.teamStatus === "DRAFT" || myTeam?.teamStatus === "REJECTED");
 
@@ -265,7 +272,12 @@ export default function TournamentTeams({ tournamentId, onCreateTeam, sportId })
 
   const fetchMyTeam = useCallback(async () => {
     try {
-      const accountId = JSON.parse(Cookies.get("account")).id;
+      const accountCookie = Cookies.get("account");
+      if (!accountCookie) {
+        setMyTeam(null);
+        return;
+      }
+      const accountId = JSON.parse(accountCookie).id;
 
       if (!accountId) {
         setMyTeam(null);
@@ -326,7 +338,9 @@ export default function TournamentTeams({ tournamentId, onCreateTeam, sportId })
 
   const handleCreateTeam = async () => {
     try {
-      const playerId = JSON.parse(Cookies.get("account")).playerId;
+      const accountCookie = Cookies.get("account");
+      if (!accountCookie) return;
+      const playerId = JSON.parse(accountCookie).playerId;
       const res = await createTeam(form, playerId, tournamentId);
       toast.success("Team created successfully");
 
@@ -393,11 +407,13 @@ export default function TournamentTeams({ tournamentId, onCreateTeam, sportId })
 
   const handleSendRequest = async () => {
     try {
+      const accountCookie = Cookies.get("account");
+      if (!accountCookie) return;
       setLoading(true);
       await createTeamRequest({
         teamId: myTeam.teamId,
         tournamentId: tournamentId,
-        playerId: JSON.parse(Cookies.get("account")).playerId,
+        playerId: JSON.parse(accountCookie).playerId,
       });
       toast.success("Team request sent successfully");
       setPlayerText("");
@@ -540,6 +556,11 @@ export default function TournamentTeams({ tournamentId, onCreateTeam, sportId })
                 Send Request
               </button>
             )}
+          </div>
+        ) : !account?.id ? (
+          <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-red-600 p-6 max-w-xs mx-auto">
+            <p className="text-red-600 font-semibold mb-2">Access Denied</p>
+            <p className="text-gray-500 text-sm italic">Please log in to create or manage your team.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4 items-center justify-center min-h-[300px] w-full max-w-xs mx-auto">

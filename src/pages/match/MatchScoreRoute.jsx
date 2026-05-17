@@ -637,7 +637,7 @@ export default function MatchScoreRoute() {
             label="Start Match"
             bg="bg-red-600"
             shadow="shadow-red-500/40"
-            disabled={!tossWinner || !decision}
+            disabled={!tossWinner || !decision || !scorerUsername.trim()}
             onClick={async () => {
               setStarting(true);
               try {

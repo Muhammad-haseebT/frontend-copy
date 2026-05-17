@@ -10,13 +10,22 @@ export default function MyScorer() {
   const [scorer, setScorer] = useState([]);
   useEffect(() => {
     const fetchScorer = async () => {
-      const response = await getMatchScorer(
-        JSON.parse(Cookies.get("account")).id,
-      );
-      setScorer(response.data);
+      try {
+        const accountCookie = Cookies.get("account");
+        if (!accountCookie) {
+          navigate("/");
+          return;
+        }
+        const response = await getMatchScorer(
+          JSON.parse(accountCookie).id,
+        );
+        setScorer(response.data);
+      } catch (err) {
+        navigate("/");
+      }
     };
     fetchScorer();
-  }, []);
+  }, [navigate]);
   return (
     <div>
       <h1 className="text-3xl font-bold mb-4 mt-3 text-center text-[#E31212]">

@@ -42,6 +42,12 @@ function Login() {
     }
   };
 
+  const handleContinueAsGuest = () => {
+    Cookies.remove("account", { path: "/" });
+    localStorage.clear();
+    navigate("/home");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
@@ -69,6 +75,13 @@ function Login() {
           className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold transition"
         >
           LOG IN
+        </button>
+
+        <button
+          onClick={handleContinueAsGuest}
+          className="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold transition"
+        >
+          Continue as Guest
         </button>
 
         <ToastContainer position="top-center" autoClose={2000} />

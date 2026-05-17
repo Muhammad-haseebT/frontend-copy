@@ -34,16 +34,12 @@ export default function MyFavouriteMedia() {
   };
 
   const handleRemoveFavourite = async (mediaId) => {
-    // Optimistically remove from list
+    const media = mediaList.find((m) => m.id === mediaId);
+    const mId = media?.matchId || -1;
+
     setMediaList((prev) => prev.filter((m) => m.id !== mediaId));
     try {
-      // In getAccountFavouriteMedia, the response only gives Media DTOs.
-      // But toggleFavouriteMedia needs matchId. 
-      // The media DTO in MediaService.java doesn't expose matchId currently, but toggle API doesn't strictly need it if the logic drops it, OR we just pass a dummy matchId like -1 since we're un-favouriting.
-      // Wait, toggleFavouriteMedia expects matchId in the backend. 
-      // Let's pass 1 as a fallback, or we can update the backend to not require matchId for removing.
-      // Actually, passing -1 is safe because the backend checks `findByAccountIdAndMediaId(accountId, mediaId)` which doesn't check matchId.
-      await toggleFavouriteMedia(accountId, mediaId, -1);
+      await toggleFavouriteMedia(accountId, mediaId, mId);
     } catch (error) {
       console.error("Error removing favourite:", error);
       fetchFavourites(); // revert on fail
@@ -78,7 +74,7 @@ export default function MyFavouriteMedia() {
               <div className="relative">
                 <img 
                   src={media.url} 
-                  alt="Favourite" 
+                  alt={media.comment || "Favourite"} 
                   className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <button

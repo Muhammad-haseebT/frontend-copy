@@ -48,7 +48,8 @@ export default function TournamentFixtures({ tournamentId, sportId }) {
   const [fixtures, setFixtures] = useState([]);
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
-  const isAdmin = isAdminAccount(getAccountFromCookie());
+  const account = getAccountFromCookie();
+  const isAdmin = account && isAdminAccount(account);
 
   const [viewMode, setViewMode] = useState("list"); // 'list' or 'bracket'
 
@@ -374,8 +375,8 @@ export default function TournamentFixtures({ tournamentId, sportId }) {
                 {venues.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
 
-              <input type="text" name="scorerId" placeholder="Scorer ID (Optional)" value={form.scorerId} onChange={handleChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
-              <input type="text" name="mediaScorerUsername" placeholder="Media Person Username (Optional)" value={form.mediaScorerUsername} onChange={handleChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
+              <input type="text" name="scorerId" placeholder="Scorer Username *" required value={form.scorerId} onChange={handleChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
+              <input type="text" name="mediaScorerUsername" placeholder="Media Person Username *" required value={form.mediaScorerUsername} onChange={handleChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -455,9 +456,9 @@ export default function TournamentFixtures({ tournamentId, sportId }) {
                 </div>
 
                 <div className="space-y-2 pt-2 border-t mt-2">
-                  <label className="text-xs font-semibold text-gray-600 block">Optional Details</label>
-                  <input type="text" name="scorerId" placeholder="Scorer ID" value={autoConfig.scorerId} onChange={handleAutoChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
-                  <input type="text" name="mediaScorerUsername" placeholder="Media Scorer Username" value={autoConfig.mediaScorerUsername} onChange={handleAutoChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
+                  <label className="text-xs font-semibold text-gray-600 block">Scorer Details <span className="text-red-600">*</span></label>
+                  <input type="text" name="scorerId" placeholder="Scorer Username *" required value={autoConfig.scorerId} onChange={handleAutoChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
+                  <input type="text" name="mediaScorerUsername" placeholder="Media Scorer Username *" required value={autoConfig.mediaScorerUsername} onChange={handleAutoChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
                   {sportId == 1 && (
                     <input type="number" name="overs" placeholder="Overs per match" required value={autoConfig.overs} onChange={handleAutoChange} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-red-500" />
                   )}

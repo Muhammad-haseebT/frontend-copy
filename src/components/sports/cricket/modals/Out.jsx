@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { data } from "react-router-dom";
 
 export default function Out({
   mainModal,
@@ -152,17 +151,11 @@ export default function Out({
             onChange={(e) => setFielderId(e.target.value)}
           >
             <option value="">Select Fielder</option>
-            {battingTeamId == team1Id
-              ? team1Players.map((item, index) => (
-                  <option key={index} value={item.id}>
-                    {item.name}
-                  </option>
-                ))
-              : team2Players.map((item, index) => (
-                  <option key={index} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
+            {(battingTeamId == team1Id ? team2Players : team1Players).map((item, index) => (
+              <option key={index} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
           <br />
           <select
@@ -172,16 +165,17 @@ export default function Out({
             onChange={(e) => setNewBatsmanId(e.target.value)}
           >
             <option value="">Select New Batsman</option>
-            {(availableBatters?.length > 0 ? availableBatters : []).map(
-              (item, index) => (
+            {(availableBatters?.length > 0 ? availableBatters : [])
+              .filter((p) => String(p.id) !== String(strikerId) && String(p.id) !== String(nonStrikerId))
+              .map((item, index) => (
                 <option key={index} value={item.id}>
                   {item.name}
                 </option>
-              ),
-            )}
+              ))}
           </select>
           <br />
           <button
+            disabled={!fielderId || !newBatsmanId}
             onClick={() => {
               setIsWaiting?.(true);
               setCaughtModal(false);
@@ -189,7 +183,7 @@ export default function Out({
               mainModal(true);
               handleSubmit();
             }}
-            className="bg-white text-red-600 p-1 rounded-lg text-2xl h-18"
+            className="bg-white text-red-600 p-1 rounded-lg text-2xl h-18 disabled:opacity-50"
           >
             Submit
           </button>
@@ -208,7 +202,7 @@ export default function Out({
             Close
           </button>
           <input
-            type="text"
+            type="number"
             placeholder="Enter Runs"
             className="bg-white text-red-600 p-1 rounded-lg text-xl h-12 w-full mb-1 mt-5 "
             onChange={(e) => setRuns(e.target.value)}
@@ -221,17 +215,11 @@ export default function Out({
             onChange={(e) => setFielderId(e.target.value)}
           >
             <option value="">Select Fielder</option>
-            {battingTeamId == team2Id
-              ? team1Players.map((item, index) => (
-                  <option key={index} value={item.id}>
-                    {item.name}
-                  </option>
-                ))
-              : team2Players.map((item, index) => (
-                  <option key={index} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
+            {(battingTeamId == team1Id ? team2Players : team1Players).map((item, index) => (
+              <option key={index} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
           <br />
           <select
@@ -260,16 +248,17 @@ export default function Out({
             onChange={(e) => setNewBatsmanId(e.target.value)}
           >
             <option value="">Select New Batsman</option>
-            {(availableBatters?.length > 0 ? availableBatters : []).map(
-              (item, index) => (
+            {(availableBatters?.length > 0 ? availableBatters : [])
+              .filter((p) => String(p.id) !== String(strikerId) && String(p.id) !== String(nonStrikerId))
+              .map((item, index) => (
                 <option key={index} value={item.id}>
                   {item.name}
                 </option>
-              ),
-            )}
+              ))}
           </select>
           <br />
           <button
+            disabled={!fielderId || !outPlayerId || !newBatsmanId}
             onClick={() => {
               setIsWaiting?.(true);
               setRunOutModal(false);
@@ -277,7 +266,7 @@ export default function Out({
               mainModal(true);
               handleSubmit();
             }}
-            className="bg-white text-red-600 p-1 rounded-lg text-xl h-12"
+            className="bg-white text-red-600 p-1 rounded-lg text-xl h-12 disabled:opacity-50"
           >
             Submit
           </button>
@@ -303,16 +292,17 @@ export default function Out({
             onChange={(e) => setNewBatsmanId(e.target.value)}
           >
             <option value="">Select New Batsman</option>
-            {(availableBatters?.length > 0 ? availableBatters : []).map(
-              (item, index) => (
+            {(availableBatters?.length > 0 ? availableBatters : [])
+              .filter((p) => String(p.id) !== String(strikerId) && String(p.id) !== String(nonStrikerId))
+              .map((item, index) => (
                 <option key={index} value={item.id}>
                   {item.name}
                 </option>
-              ),
-            )}
+              ))}
           </select>
           <br />
           <button
+            disabled={!newBatsmanId}
             onClick={() => {
               setIsWaiting?.(true);
               setBatsmanModal(false);
@@ -320,7 +310,7 @@ export default function Out({
               outModal(false);
               handleSubmit();
             }}
-            className="bg-white text-red-600 p-1 rounded-lg text-2xl h-18"
+            className="bg-white text-red-600 p-1 rounded-lg text-2xl h-18 disabled:opacity-50"
           >
             Submit
           </button>

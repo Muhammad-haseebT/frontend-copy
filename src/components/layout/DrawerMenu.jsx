@@ -32,20 +32,29 @@ export default function DrawerMenu({ open, setOpen, username }) {
   const isAdmin = isAdminAccount(account);
   const [showInfo, setShowInfo] = useState(false);
   const fileInputRef = useRef(null);
+  const isGuest = !account;
   
   console.log("DrawerMenu account state:", account);
 
-  const menuItems = [
-    { name: "Sports", icon: <FaFutbol />, path: "/sports" },
-    { name: "Seasons", icon: <FaCalendarAlt />, path: "/seasons" },
-    { name: "Stats", icon: <FaChartBar />, path: "/stats" },
-    { name: "Compare Players", icon: <FaBalanceScale />, path: "/player-comparison" },
-    { name: "Matches", icon: <FaListAlt />, path: "/matches" },
-    isAdmin && { name: "Manage Account", icon: <FaUserShield />, path: "/manage-accounts" },
-    { name: "My Scoring Assignments", icon: <FaClipboardList />, path: "/my-scorer" },
-    { name: "Requests", icon: <FaClipboardList />, path: "/request" },
-    { name: "Logout", icon: <FaSignOutAlt />, path: "/logout", red: true },
-  ].filter(Boolean);
+  const menuItems = isGuest
+    ? [
+        { name: "Sports", icon: <FaFutbol />, path: "/sports" },
+        { name: "Seasons", icon: <FaCalendarAlt />, path: "/seasons" },
+        { name: "Matches", icon: <FaListAlt />, path: "/matches" },
+        { name: "Login", icon: <FaSignOutAlt />, path: "/", red: true },
+      ]
+    : [
+        { name: "Sports", icon: <FaFutbol />, path: "/sports" },
+        { name: "Seasons", icon: <FaCalendarAlt />, path: "/seasons" },
+        { name: "Stats", icon: <FaChartBar />, path: "/stats" },
+        { name: "Compare Players", icon: <FaBalanceScale />, path: "/player-comparison" },
+        { name: "My Favourite Media", icon: <FaHeart />, path: "/my-favourite-media" },
+        { name: "Matches", icon: <FaListAlt />, path: "/matches" },
+        isAdmin && { name: "Manage Account", icon: <FaUserShield />, path: "/manage-accounts" },
+        { name: "My Scoring Assignments", icon: <FaClipboardList />, path: "/my-scorer" },
+        { name: "Requests", icon: <FaClipboardList />, path: "/request" },
+        { name: "Logout", icon: <FaSignOutAlt />, path: "/logout", red: true },
+      ].filter(Boolean);
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -88,7 +97,7 @@ export default function DrawerMenu({ open, setOpen, username }) {
               : <div className="w-20 h-20 rounded-full bg-red-100 
                                 flex items-center justify-center 
                                 text-2xl font-bold text-red-600">
-                  {username?.[0]?.toUpperCase()}
+                  {isGuest ? "G" : username?.[0]?.toUpperCase()}
                 </div>
             }
             {account && (
@@ -100,11 +109,14 @@ export default function DrawerMenu({ open, setOpen, username }) {
                   <FaPen size={12} className="text-white" />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" 
-                      className="hidden" onChange={handlePhotoUpload} />
+                       className="hidden" onChange={handlePhotoUpload} />
               </>
             )}
           </div>
-          <span className="font-bold">{username}</span>
+          <span className="font-bold">{isGuest ? "Guest" : username}</span>
+          {isGuest && (
+            <span className="text-xs text-gray-400 italic">View-only Access</span>
+          )}
           {account?.playerId && (
             <button onClick={() => setShowInfo(true)}
               className="flex items-center gap-2 text-sm text-gray-600 
@@ -120,7 +132,14 @@ export default function DrawerMenu({ open, setOpen, username }) {
             <button
               key={item.name}
               onClick={() => {
-                navigate(item.path);
+                if (item.name === "Logout") {
+                  Cookies.remove("account", { path: "/" });
+                  localStorage.clear();
+                  setAccount(null);
+                  navigate("/");
+                } else {
+                  navigate(item.path);
+                }
                 setOpen(false);
               }}
               className={`flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-100 transition ${item.red ? "text-red-600" : "text-gray-800"
