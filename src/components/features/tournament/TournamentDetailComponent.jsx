@@ -6,7 +6,10 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LoadingSpinner from "../../common/LoadingSpinner";
 import MediaViewer from "../../common/MediaViewer";
-import { getAccountFromCookie, isAdminAccount } from "../../../utils/accessControl";
+import {
+  getAccountFromCookie,
+  isAdminAccount,
+} from "../../../utils/accessControl";
 
 export default function TournamentDetailComponent({
   option,
@@ -25,6 +28,7 @@ export default function TournamentDetailComponent({
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const isAdmin = isAdminAccount(getAccountFromCookie());
+  const [doubleWicket, setDoubleWicket] = useState(false);
 
   const handleAddSports = () => {
     if (!isAdmin) return;
@@ -33,7 +37,11 @@ export default function TournamentDetailComponent({
   const handleAddTournament = () => {
     if (!isAdmin) return;
     navigate("/create-tournament", {
-      state: { seasonID: seasonID, sportID: sportID },
+      state: {
+        seasonID: seasonID,
+        sportID: sportID,
+        doubleWicket: doubleWicket,
+      },
     });
   };
 
@@ -124,6 +132,7 @@ export default function TournamentDetailComponent({
                                 tournamentId: tournament.id,
                                 tournamentName: tournament.name,
                                 sportId: sportID,
+                                doubleWicket: tournament.doubleWicket,
                               },
                             })
                       }
@@ -146,18 +155,20 @@ export default function TournamentDetailComponent({
               </div>
 
               {/* Add Button - Only for tournaments tab */}
-              {isAdmin && <div className="mt-4">
-                <button
-                  className="bg-red-600 text-white p-4 rounded-full hover:bg-red-700 transition-colors fixed bottom-4 right-4 shadow-lg"
-                  onClick={() =>
-                    option == "season"
-                      ? handleAddSports()
-                      : handleAddTournament()
-                  }
-                >
-                  <Plus size={28} strokeWidth={3} />
-                </button>
-              </div>}
+              {isAdmin && (
+                <div className="mt-4">
+                  <button
+                    className="bg-red-600 text-white p-4 rounded-full hover:bg-red-700 transition-colors fixed bottom-4 right-4 shadow-lg"
+                    onClick={() =>
+                      option == "season"
+                        ? handleAddSports()
+                        : handleAddTournament()
+                    }
+                  >
+                    <Plus size={28} strokeWidth={3} />
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             /* Media Gallery Grid */

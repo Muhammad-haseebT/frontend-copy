@@ -66,6 +66,9 @@ export default function CricketScoring({
   inningsId,
   scorerId,
   mediaScorerUsername,
+  isDoubleWicket = false,
+  isCommentator = false,
+  commentatorUsername = "",
 }) {
   const navigate = useNavigate();
   const [match, setMatch] = useState(null);
@@ -81,6 +84,16 @@ export default function CricketScoring({
     "Info",
   ];
   const [activeTab, setActiveTab] = useState("Scoring");
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const chatSocketRef = useRef(null);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (activeTab === "Scoring") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, activeTab]);
   const firstInningsRef = useRef(true);
   const [user, setUser] = useState("");
   const [strikerId, setStrikerId] = useState(null);
@@ -387,6 +400,62 @@ export default function CricketScoring({
     // Socket should be created once for this mounted match screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const shouldConnect = activeTab === "Scoring" || isCommentator;
+
+    if (shouldConnect) {
+      if (!chatSocketRef.current) {
+        const rawSocketUrl =
+          import.meta.env.VITE_CHAT_SOCKET_URL ||
+          import.meta.env.VITE_SOCKET_URL?.replace("/ws", "/ws/chat");
+        const finalUrl =
+          rawSocketUrl +
+          "?matchId=" +
+          matchId +
+          "&username=" +
+          (commentatorUsername || "");
+
+        const ws = new WebSocket(finalUrl);
+        chatSocketRef.current = ws;
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            setChatMessages((prev) => {
+              const updated = [...prev, msg];
+              if (updated.length > 100) {
+                return updated.slice(updated.length - 100);
+              }
+              return updated;
+            });
+          } catch (e) {
+            console.error("Error parsing chat message JSON:", e);
+          }
+        };
+
+        ws.onclose = () => {
+          chatSocketRef.current = null;
+        };
+
+        ws.onerror = (error) => {
+          console.error("Chat WebSocket error:", error);
+        };
+      }
+    } else {
+      if (chatSocketRef.current) {
+        chatSocketRef.current.close();
+        chatSocketRef.current = null;
+      }
+    }
+
+    return () => {
+      if (chatSocketRef.current) {
+        chatSocketRef.current.close();
+        chatSocketRef.current = null;
+      }
+    };
+  }, [activeTab, isCommentator, matchId, commentatorUsername]);
 
   // ─────────────────────────────────────────────────────────────
   // MODAL LOGIC — all modal state goes through openModal()
@@ -1035,7 +1104,8 @@ export default function CricketScoring({
                     )}
                     <span
                       className={`${
-                        ball.eventType === "wicket"
+                        ball.eventType === "wicket" ||
+                        ball.eventType === "noball_runout"
                           ? "bg-red-600"
                           : ball.eventType === "penalty"
                             ? "bg-orange-500"
@@ -1049,13 +1119,155 @@ export default function CricketScoring({
                       } p-2 rounded-full text-white w-12 h-12 flex items-center justify-center transition-transform ${canEdit ? "cursor-pointer hover:scale-105" : ""}`}
                       onClick={() => canEdit && setSelectedBallId(ball.id)}
                     >
-                      {ball.eventType !== "run" && ball.eventType !== "boundary"
-                        ? `${ball.event}${eventLabel[ball.eventType] || ""}`
-                        : ball.event}
+                      {ball.eventType === "noball_runout"
+                        ? `${ball.event}NR`
+                        : ball.eventType !== "run" &&
+                            ball.eventType !== "boundary"
+                          ? `${ball.event}${eventLabel[ball.eventType] || ""}`
+                          : ball.event}
                     </span>
                   </span>
                 ))}
               </span>
+            </div>
+          )}
+
+          {/* ── Commentary Box for Commentator & Spectators ── */}
+          {activeTab === "Scoring" && (!canEdit || isCommentator) && (
+            <div className="max-w-2xl mx-auto p-4 bg-white rounded-xl shadow-md border border-gray-100 flex flex-col h-[400px] mt-4">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-red-600 pb-2 flex items-center justify-between">
+                <span>Live Match Commentary</span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"
+                  title="Connected"
+                />
+              </h2>
+
+              {/* Scrollable message list */}
+              <div className="flex-1 overflow-y-auto mb-4 space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
+                {chatMessages.filter((msg) => msg.type !== "system").length ===
+                0 ? (
+                  <div className="text-center text-gray-400 py-12 italic text-sm">
+                    No commentary messages yet. Be the first to start!
+                  </div>
+                ) : (
+                  chatMessages
+                    .filter((msg) => msg.type !== "system")
+                    .map((msg, idx) => {
+                      const isMsgCommentator =
+                        msg.username === commentatorUsername;
+                      return (
+                        <div key={idx} className="flex flex-col items-start">
+                          <div
+                            className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm ${
+                              isMsgCommentator
+                                ? "bg-red-600 text-white rounded-tl-none border-l-4 border-red-800"
+                                : "bg-gray-100 text-gray-800 rounded-tl-none"
+                            }`}
+                          >
+                            <div className="flex justify-between items-baseline gap-4 mb-0.5">
+                              <span
+                                className={`text-[10px] font-black uppercase tracking-wider ${isMsgCommentator ? "text-red-200" : "text-gray-500"}`}
+                              >
+                                {msg.username}
+                              </span>
+                              <span
+                                className={`text-[8px] ${isMsgCommentator ? "text-red-300" : "text-gray-400"}`}
+                              >
+                                {msg.timestamp ||
+                                  new Date().toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                              </span>
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                              {msg.message || msg.text}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input / Reactions panel */}
+              <div className="border-t border-gray-100 pt-3">
+                {isCommentator ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!chatInput.trim()) return;
+                      if (
+                        chatSocketRef.current &&
+                        chatSocketRef.current.readyState === WebSocket.OPEN
+                      ) {
+                        chatSocketRef.current.send(
+                          JSON.stringify({
+                            message: chatInput,
+                            username: commentatorUsername,
+                          }),
+                        );
+                        setChatInput("");
+                      } else {
+                        alert("Chat connection is lost. Reconnecting...");
+                      }
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Type your official match commentary..."
+                      className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-gray-50 hover:bg-gray-100/50 transition"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition active:scale-95 shadow-md shadow-red-500/25"
+                    >
+                      Send
+                    </button>
+                  </form>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-xs text-gray-400 font-medium">
+                      React to the live actions:
+                    </p>
+                    <div className="flex justify-center gap-4 py-1">
+                      {["🔥", "❤️", "👏", "😮"].map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            const currentUsername =
+                              user?.username ||
+                              JSON.parse(Cookies.get("account") || "{}")
+                                ?.username;
+                            if (
+                              chatSocketRef.current &&
+                              chatSocketRef.current.readyState ===
+                                WebSocket.OPEN
+                            ) {
+                              chatSocketRef.current.send(
+                                JSON.stringify({
+                                  message: emoji,
+                                  username: currentUsername || "Guest",
+                                }),
+                              );
+                            } else {
+                              alert("Chat connection is lost. Reconnecting...");
+                            }
+                          }}
+                          className="w-12 h-12 bg-gray-50 hover:bg-gray-100 active:scale-90 border border-gray-100 rounded-full text-2xl flex items-center justify-center transition shadow-sm hover:shadow"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1086,31 +1298,94 @@ export default function CricketScoring({
           )}
 
           {/* ── Main scoring panel ── */}
-          {activeTab === "Scoring" && mainModal && canEdit && (
-            <div className="mt-3">
-              <div className="bg-red-600 p-3 h-74.5">
-                <div
-                  className={`grid grid-cols-5 space-y-2 space-x-2 mt-4 ${
-                    isWaiting ||
-                    end_InningsModal ||
-                    end_InningsAndSuperOverModal ||
-                    playerSelectModal
-                      ? "opacity-50 pointer-events-none"
-                      : ""
-                  }`}
-                >
-                  {["1", "2", "3", "4", "6"].map((run) => (
+          {activeTab === "Scoring" &&
+            !isCommentator &&
+            mainModal &&
+            canEdit && (
+              <div className="mt-3">
+                <div className="bg-red-600 p-3 h-74.5">
+                  <div
+                    className={`grid grid-cols-5 space-y-2 space-x-2 mt-4 ${
+                      isWaiting ||
+                      end_InningsModal ||
+                      end_InningsAndSuperOverModal ||
+                      playerSelectModal
+                        ? "opacity-50 pointer-events-none"
+                        : ""
+                    }`}
+                  >
+                    {["1", "2", "3", "4", "6"].map((run) => (
+                      <button
+                        key={run}
+                        disabled={isWaiting}
+                        className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setIsWaiting(true);
+                          socketRef.current.send(
+                            JSON.stringify(
+                              handleRuns(
+                                data,
+                                run,
+                                "run",
+                                data.batsmanId,
+                                data.bowlerId,
+                              ),
+                            ),
+                          );
+                        }}
+                      >
+                        {run}
+                      </button>
+                    ))}
+
                     <button
-                      key={run}
                       disabled={isWaiting}
                       className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        handleExtraModal("legbye");
+                      }}
+                    >
+                      LB
+                    </button>
+                    <button
+                      disabled={isWaiting}
+                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        handleExtraModal("bye");
+                      }}
+                    >
+                      BYE
+                    </button>
+                    <button
+                      disabled={isWaiting}
+                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        handleExtraModal("wide");
+                      }}
+                    >
+                      Wide
+                    </button>
+                    <button
+                      disabled={isWaiting}
+                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        handleExtraModal("noball");
+                      }}
+                    >
+                      NB
+                    </button>
+
+                    {/* Dot ball */}
+                    <button
+                      disabled={isWaiting}
+                      className="bg-white flex items-center justify-center text-red-600 p-1 rounded-lg h-20 disabled:cursor-not-allowed"
                       onClick={() => {
                         setIsWaiting(true);
                         socketRef.current.send(
                           JSON.stringify(
                             handleRuns(
                               data,
-                              run,
+                              "0",
                               "run",
                               data.batsmanId,
                               data.bowlerId,
@@ -1119,117 +1394,59 @@ export default function CricketScoring({
                         );
                       }}
                     >
-                      {run}
+                      <Dot size={50} />
                     </button>
-                  ))}
 
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      handleExtraModal("legbye");
-                    }}
-                  >
-                    LB
-                  </button>
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      handleExtraModal("bye");
-                    }}
-                  >
-                    BYE
-                  </button>
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      handleExtraModal("wide");
-                    }}
-                  >
-                    Wide
-                  </button>
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      handleExtraModal("noball");
-                    }}
-                  >
-                    NB
-                  </button>
+                    {/* MORE */}
+                    <button
+                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 relative"
+                      onClick={() => openModal("moreModal")}
+                    >
+                      MORE
+                      {isSuperOverPending && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
+                      )}
+                    </button>
 
-                  {/* Dot ball */}
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white flex items-center justify-center text-red-600 p-1 rounded-lg h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      setIsWaiting(true);
-                      socketRef.current.send(
-                        JSON.stringify(
-                          handleRuns(
-                            data,
-                            "0",
-                            "run",
-                            data.batsmanId,
-                            data.bowlerId,
-                          ),
-                        ),
-                      );
-                    }}
-                  >
-                    <Dot size={50} />
-                  </button>
+                    <button className="bg-white text-red-600 p-1 rounded-lg text-2xl flex items-center justify-center h-20">
+                      <BiCricketBall size={50} />
+                    </button>
+                    <button className="bg-white text-red-600 p-1 rounded-lg text-2xl flex items-center justify-center">
+                      <Camera size={50} />
+                    </button>
 
-                  {/* MORE */}
-                  <button
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 relative"
-                    onClick={() => openModal("moreModal")}
-                  >
-                    MORE
-                    {isSuperOverPending && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
-                    )}
-                  </button>
+                    {/* UNDO */}
+                    <button
+                      disabled={isWaiting}
+                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        setIsWaiting(true);
+                        socketRef.current.send(
+                          JSON.stringify(handleUndo(data)),
+                        );
+                      }}
+                    >
+                      UNDO
+                    </button>
 
-                  <button className="bg-white text-red-600 p-1 rounded-lg text-2xl flex items-center justify-center h-20">
-                    <BiCricketBall size={50} />
-                  </button>
-                  <button className="bg-white text-red-600 p-1 rounded-lg text-2xl flex items-center justify-center">
-                    <Camera size={50} />
-                  </button>
-
-                  {/* UNDO */}
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      setIsWaiting(true);
-                      socketRef.current.send(JSON.stringify(handleUndo(data)));
-                    }}
-                  >
-                    UNDO
-                  </button>
-
-                  {/* OUT */}
-                  <button
-                    disabled={isWaiting}
-                    className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      handleOutModal();
-                    }}
-                  >
-                    Out
-                  </button>
+                    {/* OUT */}
+                    <button
+                      disabled={isWaiting}
+                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-20 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        handleOutModal();
+                      }}
+                    >
+                      Out
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* ── Player select modal ── */}
           {/* ── Player select modal ── */}
-          {activeTab === "Scoring" && playerSelectModal && (
+          {activeTab === "Scoring" && !isCommentator && playerSelectModal && (
             <div className="mt-5">
               <div className="bg-red-600 p-3 h-89.5">
                 <div className="flex flex-col space-y-2 space-x-2 mt-5">
@@ -1323,7 +1540,7 @@ export default function CricketScoring({
           )}
 
           {/* ── Bowler modal (new over) ── */}
-          {activeTab === "Scoring" && bowlerModal && (
+          {activeTab === "Scoring" && !isCommentator && bowlerModal && (
             <div className="mt-5">
               <div className="bg-red-600 p-3 h-89.5">
                 <div className="flex flex-col space-y-2 space-x-2 mt-5">
@@ -1360,7 +1577,7 @@ export default function CricketScoring({
             </div>
           )}
 
-          {activeTab === "Scoring" && extraModal && (
+          {activeTab === "Scoring" && !isCommentator && extraModal && (
             <Extras
               mainModal={(val) => (val ? openModal("mainModal") : null)}
               extraType={data.extraType}
@@ -1368,15 +1585,6 @@ export default function CricketScoring({
               setData={setData}
               socket={socketRef.current}
               setIsWaiting={setIsWaiting}
-            />
-          )}
-
-          {activeTab === "Scoring" && outModal && (
-            <Out
-              mainModal={(val) => (val ? openModal("mainModal") : null)}
-              outModal={(val) => !val && openModal("mainModal")}
-              setData={setData}
-              socket={socketRef.current}
               strikerId={strikerId}
               nonStrikerId={nonStrikerId}
               team1Players={team1Players}
@@ -1384,13 +1592,31 @@ export default function CricketScoring({
               battingTeamId={battingTeamId}
               team1Id={team1Id}
               team2Id={team2Id}
+              availableBatters={availableBatters}
+              isDoubleWicket={isDoubleWicket}
+              setOutModal={() => openModal("outModal")}
+            />
+          )}
+
+          {activeTab === "Scoring" && !isCommentator && outModal && (
+            <Out
+              mainModal={(val) => (val ? openModal("mainModal") : null)}
+              outModal={(val) => !val && openModal("mainModal")}
+              setData={setData}
+              socket={socketRef.current}
+              strikerId={strikerId}
+              nonStrikerId={nonStrikerId}
               setIsWaiting={setIsWaiting}
               availableBatters={availableBatters}
+              availableBowlers={availableBowlers}
+              data={data}
+              isDoubleWicket={isDoubleWicket}
+              isNoballs={data.eventType === "noball_runout"}
             />
           )}
 
           {/* ── End innings confirmation modal ── */}
-          {activeTab === "Scoring" && end_InningsModal && (
+          {activeTab === "Scoring" && !isCommentator && end_InningsModal && (
             <div className="mt-5">
               <div className="bg-red-600 p-3 h-89.5">
                 <div className="flex flex-col space-y-2 space-x-2 mt-5">
@@ -1965,128 +2191,20 @@ export default function CricketScoring({
             </div>
           )}
         </div>
-        {activeTab === "Scoring" && end_InningsAndSuperOverModal && (
-          <div className="mt-5">
-            <div className="bg-red-600 p-3 h-89.5">
-              <div className="flex flex-col space-y-2 space-x-2 mt-5">
-                {/* ── PHASE A: Tie detected — choose End Match OR Super Over ── */}
-                {isSuperOverPending && !isSuperOver && (
-                  <>
-                    <p className="text-white text-lg font-semibold text-center">
-                      ⚡ Match Tied! Play Super Over?
-                    </p>
+        {activeTab === "Scoring" &&
+          !isCommentator &&
+          end_InningsAndSuperOverModal && (
+            <div className="mt-5">
+              <div className="bg-red-600 p-3 h-89.5">
+                <div className="flex flex-col space-y-2 space-x-2 mt-5">
+                  {/* ── PHASE A: Tie detected — choose End Match OR Super Over ── */}
+                  {isSuperOverPending && !isSuperOver && (
+                    <>
+                      <p className="text-white text-lg font-semibold text-center">
+                        ⚡ Match Tied! Play Super Over?
+                      </p>
 
-                    {/* End Match (no super over) */}
-                    <button
-                      disabled={isWaiting}
-                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => {
-                        isEndingMatch.current = true;
-                        setIsWaiting(true);
-                        socketRef.current.send(
-                          JSON.stringify(handleEndInnings(data)),
-                        );
-                        openModal("mainModal");
-                      }}
-                    >
-                      End Match
-                    </button>
-
-                    {/* Super Over */}
-                    <button
-                      disabled={isWaiting}
-                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => {
-                        setIsWaiting(true);
-                        socketRef.current.send(
-                          JSON.stringify({
-                            ...data,
-                            eventType: "Super_Over",
-                            event: "0",
-                            comment: "",
-                            undo: false,
-                          }),
-                        );
-                        // Teams stay the same — last batting team bats in SO
-                        setIsSuperOver(true);
-                        setIsSuperOverPending(false);
-                        setIsSuperOverInnings(1);
-                        setStrikerId(null);
-                        setNonStrikerId(null);
-                        setBowlerId(null);
-                        player1IdRef.current = null;
-                        player2IdRef.current = null;
-                        openModal("playerSelectModal");
-                      }}
-                    >
-                      ⚡ Super Over
-                    </button>
-
-                    {/* Undo */}
-                    <button
-                      disabled={isWaiting}
-                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => {
-                        setIsWaiting(true);
-                        socketRef.current.send(
-                          JSON.stringify(handleUndo(data)),
-                        );
-                        setData((prev) => ({ ...prev, eventType: "" }));
-                        openModal("mainModal");
-                      }}
-                    >
-                      Undo Last Ball
-                    </button>
-                  </>
-                )}
-
-                {/* ── PHASE B: Super Over in progress — end SO innings ── */}
-                {isSuperOver && (
-                  <>
-                    <p className="text-white text-lg font-semibold text-center">
-                      {isSuperOverInnings === 1
-                        ? "⚡ End Super Over Innings 1?"
-                        : "⚡ End Super Over — End Match?"}
-                    </p>
-
-                    {/* End SO Innings 1 → switch teams → pick new players */}
-                    {isSuperOverInnings === 1 && (
-                      <button
-                        disabled={isWaiting}
-                        className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => {
-                          const newBattingId = bowlingTeamId;
-                          const newBowlingId = battingTeamId;
-                          setBattingTeamId(newBattingId);
-                          setBowlingTeamId(newBowlingId);
-                          setIsSuperOverInnings(2);
-                          setStrikerId(null);
-                          setNonStrikerId(null);
-                          setBowlerId(null);
-                          player1IdRef.current = null;
-                          player2IdRef.current = null;
-                          fetchTeamPlayersForSuperOver(newBattingId);
-                          setIsWaiting(true);
-                          socketRef.current.send(
-                            JSON.stringify({
-                              ...data,
-                              eventType: "End_Innings",
-                              event: "0",
-                              comment: "",
-                              undo: false,
-                              superOver: true,
-                              firstInnings: true,
-                            }),
-                          );
-                          openModal("playerSelectModal");
-                        }}
-                      >
-                        End Super Over Innings
-                      </button>
-                    )}
-
-                    {/* End SO Innings 2 → match over */}
-                    {isSuperOverInnings === 2 && (
+                      {/* End Match (no super over) */}
                       <button
                         disabled={isWaiting}
                         className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2094,44 +2212,154 @@ export default function CricketScoring({
                           isEndingMatch.current = true;
                           setIsWaiting(true);
                           socketRef.current.send(
-                            JSON.stringify({
-                              ...data,
-                              eventType: "End_Innings",
-                              event: "0",
-                              comment: "",
-                              undo: false,
-                              superOver: true,
-                              firstInnings: false,
-                            }),
+                            JSON.stringify(handleEndInnings(data)),
                           );
                           openModal("mainModal");
                         }}
                       >
                         End Match
                       </button>
-                    )}
 
-                    {/* Undo */}
-                    <button
-                      disabled={isWaiting}
-                      className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => {
-                        setIsWaiting(true);
-                        socketRef.current.send(
-                          JSON.stringify(handleUndo(data)),
-                        );
-                        setData((prev) => ({ ...prev, eventType: "" }));
-                        openModal("mainModal");
-                      }}
-                    >
-                      Undo Last Ball
-                    </button>
-                  </>
-                )}
+                      {/* Super Over */}
+                      <button
+                        disabled={isWaiting}
+                        className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setIsWaiting(true);
+                          socketRef.current.send(
+                            JSON.stringify({
+                              ...data,
+                              eventType: "Super_Over",
+                              event: "0",
+                              comment: "",
+                              undo: false,
+                            }),
+                          );
+                          // Teams stay the same — last batting team bats in SO
+                          setIsSuperOver(true);
+                          setIsSuperOverPending(false);
+                          setIsSuperOverInnings(1);
+                          setStrikerId(null);
+                          setNonStrikerId(null);
+                          setBowlerId(null);
+                          player1IdRef.current = null;
+                          player2IdRef.current = null;
+                          openModal("playerSelectModal");
+                        }}
+                      >
+                        ⚡ Super Over
+                      </button>
+
+                      {/* Undo */}
+                      <button
+                        disabled={isWaiting}
+                        className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setIsWaiting(true);
+                          socketRef.current.send(
+                            JSON.stringify(handleUndo(data)),
+                          );
+                          setData((prev) => ({ ...prev, eventType: "" }));
+                          openModal("mainModal");
+                        }}
+                      >
+                        Undo Last Ball
+                      </button>
+                    </>
+                  )}
+
+                  {/* ── PHASE B: Super Over in progress — end SO innings ── */}
+                  {isSuperOver && (
+                    <>
+                      <p className="text-white text-lg font-semibold text-center">
+                        {isSuperOverInnings === 1
+                          ? "⚡ End Super Over Innings 1?"
+                          : "⚡ End Super Over — End Match?"}
+                      </p>
+
+                      {/* End SO Innings 1 → switch teams → pick new players */}
+                      {isSuperOverInnings === 1 && (
+                        <button
+                          disabled={isWaiting}
+                          className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => {
+                            const newBattingId = bowlingTeamId;
+                            const newBowlingId = battingTeamId;
+                            setBattingTeamId(newBattingId);
+                            setBowlingTeamId(newBowlingId);
+                            setIsSuperOverInnings(2);
+                            setStrikerId(null);
+                            setNonStrikerId(null);
+                            setBowlerId(null);
+                            player1IdRef.current = null;
+                            player2IdRef.current = null;
+                            fetchTeamPlayersForSuperOver(newBattingId);
+                            setIsWaiting(true);
+                            socketRef.current.send(
+                              JSON.stringify({
+                                ...data,
+                                eventType: "End_Innings",
+                                event: "0",
+                                comment: "",
+                                undo: false,
+                                superOver: true,
+                                firstInnings: true,
+                              }),
+                            );
+                            openModal("playerSelectModal");
+                          }}
+                        >
+                          End Super Over Innings
+                        </button>
+                      )}
+
+                      {/* End SO Innings 2 → match over */}
+                      {isSuperOverInnings === 2 && (
+                        <button
+                          disabled={isWaiting}
+                          className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => {
+                            isEndingMatch.current = true;
+                            setIsWaiting(true);
+                            socketRef.current.send(
+                              JSON.stringify({
+                                ...data,
+                                eventType: "End_Innings",
+                                event: "0",
+                                comment: "",
+                                undo: false,
+                                superOver: true,
+                                firstInnings: false,
+                              }),
+                            );
+                            openModal("mainModal");
+                          }}
+                        >
+                          End Match
+                        </button>
+                      )}
+
+                      {/* Undo */}
+                      <button
+                        disabled={isWaiting}
+                        className="bg-white text-red-600 p-1 rounded-lg text-2xl h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setIsWaiting(true);
+                          socketRef.current.send(
+                            JSON.stringify(handleUndo(data)),
+                          );
+                          setData((prev) => ({ ...prev, eventType: "" }));
+                          openModal("mainModal");
+                        }}
+                      >
+                        Undo Last Ball
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </>
   );

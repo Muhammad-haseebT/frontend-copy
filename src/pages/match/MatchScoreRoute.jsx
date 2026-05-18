@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import Cookies from "js-cookie";
 import { startmatch, abondonMatch } from "../../api/matchApi";
 import { getPlayersByTeamId } from "../../api/teamApi";
 import {
@@ -53,6 +54,8 @@ export default function MatchScoreRoute() {
     match,
   } = location.state || {};
 
+  // at top of cricket upcoming section, derive limit:
+  const cricketMaxPlayers = match?.doubleWicket ? 2 : 11;
   // Toss / scorer
   const [futsalHalfMins, setFutsalHalfMins] = useState(20);
   const [tossWinner, setTossWinner] = useState(null);
@@ -99,11 +102,16 @@ export default function MatchScoreRoute() {
   const isTOW = currentSport === "Tug Of War";
   const isLudo = currentSport === "Ludo";
   const isChess = currentSport === "Chess";
-  const needsLineup = isCricket || isFutsal || isVB || isBD || isTT || isLudo || isChess;
+  const needsLineup =
+    isCricket || isFutsal || isVB || isBD || isTT || isLudo || isChess;
   const { canEditMatch } = getMatchAccess(
     match?.scorerId,
     match?.mediaScorerUsername,
   );
+  const commentatorUsername = match?.commentatorUsername;
+  const currentUsername = JSON.parse(Cookies.get("account") || "{}")?.username;
+  const isCommentator =
+    currentUsername && currentUsername === commentatorUsername;
   useEffect(() => {
     if (!needsLineup || status !== "UPCOMING") return;
     Promise.all([
@@ -442,6 +450,9 @@ export default function MatchScoreRoute() {
             inningsId={inningsId}
             scorerId={match?.scorerId}
             mediaScorerUsername={match?.mediaScorerUsername}
+            isDoubleWicket={match?.doubleWicket ?? false}
+            isCommentator={isCommentator}
+            commentatorUsername={commentatorUsername}
           />
         </div>
       )}
@@ -454,6 +465,11 @@ export default function MatchScoreRoute() {
             c1="bg-red-50 dark:bg-red-900/20 text-red-600 border-red-100 dark:border-red-900/30"
             c2="bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-100 dark:border-blue-900/30"
           />
+          {match?.doubleWicket && (
+            <div className="bg-red-100 border border-red-300 text-red-700 text-xs font-bold px-3 py-1 rounded-full text-center">
+              ⚡ Double Wicket Format — Wicket = −2 runs
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <DetailCard
               icon={MapPin}
@@ -526,8 +542,10 @@ export default function MatchScoreRoute() {
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <User size={14} className="text-red-600" />
               <span className="text-red-600">
-                Select Playing XI 
-                <span className="text-slate-400 font-normal ml-1">(optional)</span>
+                Select Playing XI
+                <span className="text-slate-400 font-normal ml-1">
+                  (optional)
+                </span>
               </span>
             </label>
 
@@ -538,19 +556,19 @@ export default function MatchScoreRoute() {
             ) : (
               <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
                 <div className="flex gap-3">
-
                   {/* Team 1 */}
                   <div className="flex-1">
                     <p className="text-xs font-black text-red-600 mb-2">
                       {team1Name}
                       <span className="text-slate-400 font-medium ml-1">
-                        ({team1Playing.size}/11)
+                        ({team1Playing.size}/{cricketMaxPlayers})
                       </span>
                     </p>
                     <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
                       {squadTeam1.map((p) => {
                         const sel = team1Playing.has(p.id);
-                        const maxed = !sel && team1Playing.size >= 11;
+                        const maxed =
+                          !sel && team1Playing.size >= cricketMaxPlayers;
                         return (
                           <button
                             key={p.id}
@@ -564,7 +582,8 @@ export default function MatchScoreRoute() {
                                   : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300"
                             }`}
                           >
-                            {sel ? "✓ " : ""}{p.name}
+                            {sel ? "✓ " : ""}
+                            {p.name}
                           </button>
                         );
                       })}
@@ -581,13 +600,14 @@ export default function MatchScoreRoute() {
                     <p className="text-xs font-black text-blue-600 mb-2">
                       {team2Name}
                       <span className="text-slate-400 font-medium ml-1">
-                        ({team2Playing.size}/11)
+                        ({team2Playing.size}/{cricketMaxPlayers})
                       </span>
                     </p>
                     <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
                       {squadTeam2.map((p) => {
                         const sel = team2Playing.has(p.id);
-                        const maxed = !sel && team2Playing.size >= 11;
+                        const maxed =
+                          !sel && team2Playing.size >= cricketMaxPlayers;
                         return (
                           <button
                             key={p.id}
@@ -601,7 +621,8 @@ export default function MatchScoreRoute() {
                                   : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-blue-300"
                             }`}
                           >
-                            {sel ? "✓ " : ""}{p.name}
+                            {sel ? "✓ " : ""}
+                            {p.name}
                           </button>
                         );
                       })}
@@ -650,8 +671,10 @@ export default function MatchScoreRoute() {
                   overs: match?.overs,
                   team1Id: t1Id,
                   team2Id: t2Id,
-                  team1PlayingIds: team1Playing.size > 0 ? [...team1Playing] : undefined,
-                  team2PlayingIds: team2Playing.size > 0 ? [...team2Playing] : undefined,
+                  team1PlayingIds:
+                    team1Playing.size > 0 ? [...team1Playing] : undefined,
+                  team2PlayingIds:
+                    team2Playing.size > 0 ? [...team2Playing] : undefined,
                 });
                 navigate(-1);
               } catch (err) {

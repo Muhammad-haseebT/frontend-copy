@@ -8,7 +8,10 @@ import {
   createTournamentAPi,
   updateTournamentAPi,
 } from "../../api/tournamentAPi";
-import { getAccountFromCookie, isAdminAccount } from "../../utils/accessControl";
+import {
+  getAccountFromCookie,
+  isAdminAccount,
+} from "../../utils/accessControl";
 
 export default function CreateTournament() {
   const today = new Date().toISOString().split("T")[0];
@@ -26,6 +29,7 @@ export default function CreateTournament() {
     username: "",
     seasonId: state.seasonID,
     sportsId: state.sportID,
+    doubleWicket: state.doubleWicket,
   });
   const type = state.type;
   const tournamentId = state.tournamentId;
@@ -149,7 +153,10 @@ export default function CreateTournament() {
                     value={option.value}
                     checked={formData.tournamentStage === option.value}
                     onChange={(e) =>
-                      setFormData({ ...formData, tournamentStage: e.target.value })
+                      setFormData({
+                        ...formData,
+                        tournamentStage: e.target.value,
+                      })
                     }
                     className="w-5 h-5  border border-red-600"
                   />
@@ -223,7 +230,17 @@ export default function CreateTournament() {
               </div>
             </div>
           )}
-
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              name="doubleWicket"
+              checked={formData.doubleWicket || false}
+              onChange={(e) =>
+                setFormData({ ...formData, doubleWicket: e.target.checked })
+              }
+            />
+            Double Wicket Format (Cricket)
+          </label>
           {/* Email */}
           <div>
             <label className="text-lg text-gray-500 mb-1 block">

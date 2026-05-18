@@ -13,7 +13,10 @@ import MediaViewer from "../../components/common/MediaViewer";
 import { ImageIcon, Pencil } from "lucide-react";
 import TournamentStatsTab from "../../components/features/tournament/TournamentStatsTab";
 import CreateTournament from "./CreateTournament";
-import { getAccountFromCookie, isAdminAccount } from "../../utils/accessControl";
+import {
+  getAccountFromCookie,
+  isAdminAccount,
+} from "../../utils/accessControl";
 
 export default function DetailedTournament() {
   const { state } = useLocation();
@@ -24,6 +27,7 @@ export default function DetailedTournament() {
     startDate: "",
     top: [],
   });
+
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [mediaData, setMediaData] = useState([]);
@@ -102,7 +106,10 @@ export default function DetailedTournament() {
 
     console.log(state.tournamentId);
     navigate("/create-tournament", {
-      state: { tournamentId: state.tournamentId, type: "edit" },
+      state: {
+        tournamentId: state.tournamentId,
+        type: "edit",
+      },
     });
   };
 
@@ -166,6 +173,7 @@ export default function DetailedTournament() {
               <TournamentFixtures
                 tournamentId={state.tournamentId}
                 sportId={state.sportId}
+                doubleWicket={state.doubleWicket}
               />
             )}
 
