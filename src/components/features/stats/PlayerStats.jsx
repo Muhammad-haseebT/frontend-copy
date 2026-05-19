@@ -9,6 +9,7 @@ import BadmintonPlayerStats from "./BadmintonPlayerStats";
 import TableTennisPlayerStats from "./TableTennisPlayerStats";
 import LudoPlayerStats from "./LudoPlayerStats";
 import ChessPlayerStats from "./ChessPlayerStats";
+import HockeyPlayerStats from "./HockeyPlayerStats";
 import {
   getPlayerStats,
   getPlayerTournamentStats,
@@ -23,6 +24,7 @@ const SPORTS = [
   { key: "table tennis", label: "Table Tennis", emoji: "🏓" },
   { key: "ludo", label: "Ludo", emoji: "🎲" },
   { key: "chess", label: "Chess", emoji: "♟️" },
+  { key: "hockey", label: "Hockey", emoji: "🏑" },
 ];
 
 function StatsComponent({ activeSport, stats }) {
@@ -34,6 +36,7 @@ function StatsComponent({ activeSport, stats }) {
     return <TableTennisPlayerStats stats={stats} />;
   if (s === "ludo") return <LudoPlayerStats stats={stats} />;
   if (s === "chess") return <ChessPlayerStats stats={stats} />;
+  if (s === "hockey") return <HockeyPlayerStats stats={stats} />;
   return <CricketPlayerStats stats={stats} />;
 }
 

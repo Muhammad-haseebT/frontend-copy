@@ -9,6 +9,7 @@ import Badminton from "../../assets/Badminton.png";
 import Ludo from "../../assets/Ludo.png";
 import TugOfWar from "../../assets/Tug Of War.png";
 import Chess from "../../assets/Chess.png";
+import Hockey from "../../assets/Hockey.png";
 
 export default function Sports() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function Sports() {
     { name: "Ludo", img: Ludo },
     { name: "Tug Of War", img: TugOfWar, fullWidth: true },
     { name: "Chess", img: Chess, fullWidth: true },
+    { name: "Hockey", img: Hockey, fullWidth: true },
   ];
 
   return (

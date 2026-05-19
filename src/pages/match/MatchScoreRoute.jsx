@@ -23,6 +23,7 @@ import TableTennisScoring from "../../components/sports/tabletennis/TableTennisS
 import TugOfWarScoring from "../../components/sports/TugOfWar/TugOfWarScoring.jsx";
 import LudoScoring from "../../components/sports/ludo/LudoScoring.jsx";
 import ChessScoring from "../../components/sports/chess/ChessScoring.jsx";
+import HockeyScoring from "../../components/sports/hockey/HockeyScoring.jsx";
 import { getMatchAccess } from "../../utils/accessControl";
 // Sport index matches DB sportId
 const SPORTS = [
@@ -34,6 +35,7 @@ const SPORTS = [
   "Ludo", // 6
   "Tug Of War", // 7
   "Chess", // 8
+  "Hockey", // 9
 ];
 
 export default function MatchScoreRoute() {
@@ -73,6 +75,7 @@ export default function MatchScoreRoute() {
   const [ttFormat, setTtFormat] = useState("singles");
   const [ludoFormat, setLudoFormat] = useState(match?.matchFormat || "1v1");
   const [chessFormat, setChessFormat] = useState(match?.matchFormat || "1v1");
+  const [hockeyPeriodMins, setHockeyPeriodMins] = useState(15);
   const [squadLoaded, setSquadLoaded] = useState(false);
   // Volleyball config
   const [vbSets, setVbSets] = useState(3);
@@ -102,8 +105,9 @@ export default function MatchScoreRoute() {
   const isTOW = currentSport === "Tug Of War";
   const isLudo = currentSport === "Ludo";
   const isChess = currentSport === "Chess";
+  const isHockey = currentSport === "Hockey";
   const needsLineup =
-    isCricket || isFutsal || isVB || isBD || isTT || isLudo || isChess;
+    isCricket || isFutsal || isVB || isBD || isTT || isLudo || isChess || isHockey;
   const { canEditMatch } = getMatchAccess(
     match?.scorerId,
     match?.mediaScorerUsername,
@@ -1690,6 +1694,95 @@ export default function MatchScoreRoute() {
                   scorerId: scorerUsername,
                   sportId,
                   matchFormat: chessFormat, // ← FIX: send format to backend
+                  team1PlayingIds: [...team1Playing],
+                  team2PlayingIds: [...team2Playing],
+                });
+                navigate(-1);
+              } catch (err) {
+                Swal.fire({
+                  title: "Error",
+                  text: err?.response?.data?.message || "Failed.",
+                  icon: "error",
+                });
+              } finally {
+                setStarting(false);
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* ══ HOCKEY ══════════════════════════════════════════════ */}
+      {isHockey && (status === "LIVE" || status === "COMPLETED") && (
+        <div className="flex-1 overflow-auto">
+          <HockeyScoring
+            matchId={matchId}
+            status={status}
+            team1Id={team1Id}
+            team2Id={team2Id}
+            team1Name={team1Name}
+            team2Name={team2Name}
+            scorerId={match?.scorerId}
+            mediaScorerUsername={match?.mediaScorerUsername}
+          />
+        </div>
+      )}
+
+      {isHockey && status === "UPCOMING" && (
+        <div className="flex-1 flex flex-col p-4 max-w-lg mx-auto w-full space-y-4 overflow-auto">
+          <TeamHeader
+            shadow="shadow-blue-500/10"
+            vs="bg-blue-700"
+            subtitle="Hockey Setup"
+            c1="bg-blue-50 dark:bg-blue-900/20 text-blue-700 border-blue-100 dark:border-blue-900/30"
+            c2="bg-sky-50 dark:bg-sky-900/20 text-sky-600 border-sky-100 dark:border-sky-900/30"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <DetailCard icon={MapPin} label="Venue" value={venue} accent="text-blue-600" />
+            <DetailCard icon={Calendar} label="Date" value={match?.date?.split("T")[0]} accent="text-blue-600" />
+            <DetailCard icon={Clock} label="Time" value={match?.time} accent="text-blue-600" />
+            <DetailCard icon={Hash} label="Period Duration" value={`${hockeyPeriodMins} min`} accent="text-blue-600" />
+          </div>
+
+          <NumStepper
+            label="Period Duration (minutes)"
+            value={hockeyPeriodMins}
+            onChange={setHockeyPeriodMins}
+            min={5}
+            accent="text-blue-700"
+          />
+
+          <PlayerLinePicker sport="futsal" accentColor="text-blue-700" />
+
+          <TossButtons accentActive="text-blue-700" hoverBorder="hover:border-blue-200" />
+
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <User size={14} /> Scorer Username
+            </label>
+            <input
+              type="text"
+              value={scorerUsername}
+              onChange={(e) => setScorerUsername(e.target.value)}
+              className="w-full py-3 px-4 rounded-2xl text-sm font-bold border-2 border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+              placeholder="Enter scorer username"
+            />
+          </div>
+
+          <StartBtn
+            label="🏑 Start Hockey Match"
+            bg="bg-blue-700"
+            shadow="shadow-blue-500/40"
+            disabled={!tossWinner}
+            onClick={async () => {
+              setStarting(true);
+              try {
+                await startmatch(matchId, {
+                  tossWinnerId,
+                  decision: "PUSH",
+                  scorerId: scorerUsername,
+                  sportId,
+                  periodDurationMins: hockeyPeriodMins,
                   team1PlayingIds: [...team1Playing],
                   team2PlayingIds: [...team2Playing],
                 });

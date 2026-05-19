@@ -9,6 +9,7 @@ export default function SportFilter({ onFilter, selectedSport }) {
     { name: "Tug Of War", value: "Tug Of War" },
     { name: "Ludo", value: "Ludo" },
     { name: "Chess", value: "Chess" },
+    { name: "Hockey", value: "Hockey" },
   ];
 
   return (

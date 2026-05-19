@@ -342,6 +342,7 @@ export default function CricketScoring({
           normalized.cricketBalls,
           normalized,
           prevDataRef.current,
+          isDoubleWicket,
         );
         if (detected) {
           setMilestone(detected); // replaces any active popup immediately

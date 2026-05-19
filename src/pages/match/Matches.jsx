@@ -47,6 +47,7 @@ export default function Matches() {
     "Tug Of War": 6,
     Ludo: 7,
     Chess: 8,
+    Hockey: 9,
   };
 
   // 2. Local filtering when filters or data change

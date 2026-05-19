@@ -86,6 +86,8 @@ export default function TournamentStatsTab({ tournamentId }) {
       return <LudoStats stats={stats} motProps={motProps} />;
     case "chess":
       return <ChessStats stats={stats} motProps={motProps} />;
+    case "hockey":
+      return <HockeyStats stats={stats} motProps={motProps} />;
     default:
       return <CricketStats stats={stats} motProps={motProps} />;
   }
@@ -201,6 +203,65 @@ function FutsalStats({ stats, motProps }) {
         <Leaderboard
           title="Top Assisters"
           icon="🤝"
+          accentColor="blue"
+          columns={["Assists", "Goals", "G+A"]}
+          highlightCol={0}
+          rows={stats.topAssisters.map((p) => ({
+            name: p.playerName,
+            cols: [p.assists, p.goals, (p.goals || 0) + (p.assists || 0)],
+          }))}
+        />
+      )}
+      <PomList awards={stats.allAwards} />
+    </div>
+  );
+}
+
+// ── Hockey ───────────────────────────────────────────────────────
+function HockeyStats({ stats, motProps }) {
+  return (
+    <div className="space-y-6">
+      <ManOfTournament {...motProps} />
+      <FavouritePlayerCard {...motProps} />
+      <div className="grid md:grid-cols-2 gap-4">
+        <AwardCard
+          title="🏑 Top Scorer"
+          icon="🏑"
+          name={stats.topScorer?.playerName}
+          detail={stats.topScorer?.reason}
+          color="emerald"
+        />
+        <AwardCard
+          title="🎯 Top Assister"
+          icon="🎯"
+          name={stats.topAssist?.playerName}
+          detail={stats.topAssist?.reason}
+          color="blue"
+        />
+      </div>
+      {stats.topGoalScorers?.length > 0 && (
+        <Leaderboard
+          title="Top Goal Scorers"
+          icon="🏑"
+          accentColor="emerald"
+          columns={["Goals", "Assists", "G+A", "🟨", "🟥"]}
+          highlightCol={0}
+          rows={stats.topGoalScorers.map((p) => ({
+            name: p.playerName,
+            cols: [
+              p.goals,
+              p.assists,
+              (p.goals || 0) + (p.assists || 0),
+              p.yellowCards || 0,
+              p.redCards || 0,
+            ],
+          }))}
+        />
+      )}
+      {stats.topAssisters?.length > 0 && (
+        <Leaderboard
+          title="Top Assisters"
+          icon="🎯"
           accentColor="blue"
           columns={["Assists", "Goals", "G+A"]}
           highlightCol={0}

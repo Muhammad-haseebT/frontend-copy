@@ -61,6 +61,12 @@ export default function TournamentPoints({ tournamentId, sport }) {
       if (gdB !== gdA) return gdB - gdA;
       return (b.goalsFor || 0) - (a.goalsFor || 0);
     }
+    if (s === "hockey") {
+      const gdA = a.goalDifference ?? (a.goalsFor ?? 0) - (a.goalsAgainst ?? 0);
+      const gdB = b.goalDifference ?? (b.goalsFor ?? 0) - (b.goalsAgainst ?? 0);
+      if (gdB !== gdA) return gdB - gdA;
+      return (b.goalsFor || 0) - (a.goalsFor || 0);
+    }
     if (s === "volleyball") {
       const sdA = (a.goalsFor || 0) - (a.goalsAgainst || 0);
       const sdB = (b.goalsFor || 0) - (b.goalsAgainst || 0);
@@ -73,6 +79,7 @@ export default function TournamentPoints({ tournamentId, sport }) {
   });
 
   if (s === "futsal") return <FutsalTable rows={sortedPoints} />;
+  if (s === "hockey") return <FutsalTable rows={sortedPoints} />;
   if (s === "volleyball") return <VolleyballTable rows={sortedPoints} />;
   if (s === "badminton")
     return <SimpleTable rows={sortedPoints} color="violet" legend="Win = 2 pts" />;

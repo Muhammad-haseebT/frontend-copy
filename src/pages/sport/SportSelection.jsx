@@ -11,6 +11,7 @@ import Ludo from "../../assets/Ludo.png";
 import TugOfWar from "../../assets/Tug Of War.png";
 import Chess from "../../assets/Chess.png";
 import Cricket from "../../assets/Cricket.png";
+import Hockey from "../../assets/Hockey.png";
 import { add_Sports_To_Season } from "../../api/seasonApi";
 import { ToastContainer, toast } from "react-toastify";
 import { getAccountFromCookie, isAdminAccount } from "../../utils/accessControl";
@@ -28,6 +29,7 @@ export default function SportSelection() {
     { id: 6, name: "Ludo", img: Ludo, selected: false },
     { id: 7, name: "Tug Of War", img: TugOfWar, selected: false },
     { id: 8, name: "Chess", img: Chess, selected: false },
+    { id: 9, name: "Hockey", img: Hockey, selected: false },
   ]);
 
   // Selected sports ki alag array
