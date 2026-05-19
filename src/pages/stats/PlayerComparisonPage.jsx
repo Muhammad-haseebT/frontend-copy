@@ -11,6 +11,7 @@ const SPORTS = [
   { key: "table tennis", label: "Table Tennis", emoji: "🏓" },
   { key: "ludo", label: "Ludo", emoji: "🎲" },
   { key: "chess", label: "Chess", emoji: "♟️" },
+  { key: "hockey", label: "Hockey", emoji: "🏑" },
 ];
 
 const SPORT_STATS = {
@@ -65,6 +66,14 @@ const SPORT_STATS = {
   chess: [
     { key: "matchesPlayed", label: "Matches" },
     { key: "goals", label: "Wins" },
+  ],
+  hockey: [
+    { key: "matchesPlayed", label: "Matches" },
+    { key: "goals", label: "Goals" },
+    { key: "assists", label: "Assists" },
+    { key: "futsalFouls", label: "Fouls", lowerIsBetter: true },
+    { key: "yellowCards", label: "Yellow Cards", lowerIsBetter: true },
+    { key: "redCards", label: "Red Cards", lowerIsBetter: true },
   ],
 };
 

@@ -230,17 +230,19 @@ export default function CreateTournament() {
               </div>
             </div>
           )}
-          <label className="flex items-center gap-2 text-sm font-semibold">
-            <input
-              type="checkbox"
-              name="doubleWicket"
-              checked={formData.doubleWicket || false}
-              onChange={(e) =>
-                setFormData({ ...formData, doubleWicket: e.target.checked })
-              }
-            />
-            Double Wicket Format (Cricket)
-          </label>
+          {state.sportID == 1 && (
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input
+                type="checkbox"
+                name="doubleWicket"
+                checked={formData.doubleWicket || false}
+                onChange={(e) =>
+                  setFormData({ ...formData, doubleWicket: e.target.checked })
+                }
+              />
+              Double Wicket Format (Cricket)
+            </label>
+          )}
           {/* Email */}
           <div>
             <label className="text-lg text-gray-500 mb-1 block">

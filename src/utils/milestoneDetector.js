@@ -11,7 +11,7 @@
  * @param {Object} prevData  - previous ScoreDTO payload (null on first message)
  * @returns {Object|null}    - milestone object { title, subtitle, emoji, color } or null
  */
-export function detectCricketMilestone(balls, data, prevData) {
+export function detectCricketMilestone(balls, data, prevData, isDoubleWicket = false) {
   if (!balls || balls.length === 0) return null;
 
   const prevBalls = prevData?.cricketBalls || [];
@@ -154,7 +154,7 @@ export function detectCricketMilestone(balls, data, prevData) {
 
   // ── 6. MATCH-WINNING SHOT ─────────────────────────────────────────────────
   // target <= 0 means team has won (backend convention)
-  if (!data.firstInnings && data.target <= 0) {
+  if (!data.firstInnings && data.target <= 0 && !isDoubleWicket) {
     if (isSix(latest)) return {
       title:    "WON WITH A SIX! 🎆",
       subtitle: `${latest.batsmanName || "Batsman"} — Match winner!`,

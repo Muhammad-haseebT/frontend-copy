@@ -18,6 +18,7 @@ import Request from "../pages/requests/Request";
 import Stats from "../pages/stats/Stats";
 import PlayerComparisonPage from "../pages/stats/PlayerComparisonPage";
 import MyFavouriteMedia from "../pages/stats/MyFavouriteMedia";
+import AllPlayerStats from "../pages/AllPlayerStats";
 import MatchScoreRoute from "../pages/match/MatchScoreRoute";
 import FutsalMatch from "../components/sports/football/FutsalScoring.jsx";
 import { getAccountFromCookie, isAdminAccount } from "../utils/accessControl";
@@ -77,6 +78,7 @@ function AppRoutes() {
       />
       <Route path="/stats" element={<Stats />} />
       <Route path="/player-comparison" element={<PlayerComparisonPage />} />
+      <Route path="/player-stats" element={<AllPlayerStats />} />
       <Route path="/my-favourite-media" element={<MyFavouriteMedia />} />
       <Route path="/request" element={<Request />} />
       <Route path="/match" element={<MatchScoreRoute />} />

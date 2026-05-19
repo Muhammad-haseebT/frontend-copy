@@ -46,6 +46,7 @@ export default function DetailedTournament() {
     "ludo",
     "tugofWar",
     "chess",
+    "hockey",
   ];
 
   const MEDIA_PAGE_SIZE = 6;
